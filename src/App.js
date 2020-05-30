@@ -1,6 +1,7 @@
 import React from 'react'
-import { BrowserRouter as Router, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Route, Switch } from 'react-router-dom'
 import CollectionIndex from './pages/CollectionIndex'
+import CollectionCreate from './pages/CollectionCreate'
 import CollectionShow from './pages/CollectionShow'
 import Header from './components/Header'
 import styled, { ThemeProvider } from 'styled-components'
@@ -8,7 +9,8 @@ import styled, { ThemeProvider } from 'styled-components'
 const theme = {
   blue: "#004fff",
   red: "#ba2d0b",
-  black: "#050505"
+  black: "#050505",
+  headerSize: "24px"
 }
 
 const Container = styled.div`
@@ -22,9 +24,11 @@ function App() {
       <ThemeProvider theme={ theme }>
         <Container>
           <Header />
-        
-          <Route path="/" exact component={ CollectionIndex } />
-          <Route path="/:collection" component={ CollectionShow } />
+          <Switch>
+            <Route path="/" exact component={ CollectionIndex } />
+            <Route path="/create" component={ CollectionCreate } />
+            <Route path="/:collection" component={ CollectionShow } />
+          </Switch>
         </Container>
       </ThemeProvider>
     </Router>

@@ -18,7 +18,7 @@ const StyledHeader = styled.header`
   width: 100%;
 
   h1 {
-    font-size: 24px;
+    font-size: ${ p => p.theme.headerSize };
     margin: 0;
     text-transform: uppercase;
   }

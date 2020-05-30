@@ -2,7 +2,7 @@ import React from 'react'
 import axios from 'axios'
 
 const CollectionShow = ({ location: { pathname }}) => {
-  const [schema, setSchema] = React.useState([])
+  const [schema, setSchema] = React.useState({})
   const [data, setData] = React.useState([])
 
   React.useEffect(() => {

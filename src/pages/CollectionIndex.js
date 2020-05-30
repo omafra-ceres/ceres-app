@@ -1,6 +1,27 @@
 import React from 'react'
 import axios from 'axios'
+import styled from 'styled-components'
 import { Link } from 'react-router-dom'
+
+const CollectionList = styled.div`
+  h1 {
+    font-size: ${ p => p.theme.headerSize };
+  }
+
+  ul {
+    margin: 25px 0;
+  }
+`
+
+const CreateCollectionLink = styled(Link)`
+  background: ${ p => p.theme.blue };
+  border-radius: 4px;
+  box-sizing: border-box;
+  color: white;
+  display: inline-block;
+  padding: 10px 15px;
+  text-decoration: none;
+`
 
 const CollectionIndex = () => {
   const [collections, setCollections] = React.useState([])
@@ -12,9 +33,8 @@ const CollectionIndex = () => {
   },[])
 
   return (
-    <div>
-      This is the collection index
-
+    <CollectionList>
+      <h1>Collections</h1>
       <ul>
         { collections.map(col => (
           <li key={col}>
@@ -24,7 +44,8 @@ const CollectionIndex = () => {
           </li>
         ))}
       </ul>
-    </div>
+      <CreateCollectionLink to="/create">+ Add Collection</CreateCollectionLink>
+    </CollectionList>
   )
 }
 
