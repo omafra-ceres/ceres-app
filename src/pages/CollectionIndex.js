@@ -23,6 +23,15 @@ const CreateCollectionLink = styled(Link)`
   text-decoration: none;
 `
 
+const DeleteCollectionButton = styled.button`
+  border: none;
+  background: none;
+  color: red;
+  font-size: 12px;
+  font-weight: bold;
+  margin-left: 50px;
+`
+
 const CollectionIndex = () => {
   const [collections, setCollections] = React.useState([])
 
@@ -31,6 +40,12 @@ const CollectionIndex = () => {
       .then(res => setCollections(res.data))
       .catch(console.error)
   },[])
+
+  const handleDelete = collection => {
+    axios.post("http://localhost:4000/data/delete", { collection })
+      .then(res => setCollections(res.data))
+      .catch(console.error)
+  }
 
   return (
     <CollectionList>
@@ -41,6 +56,7 @@ const CollectionIndex = () => {
             <Link to={`/${col}`}>
               {col}
             </Link>
+            <DeleteCollectionButton onClick={() => handleDelete(col)}>Delete</DeleteCollectionButton>
           </li>
         ))}
       </ul>
