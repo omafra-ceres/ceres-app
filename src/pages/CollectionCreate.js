@@ -133,6 +133,11 @@ const FieldContainer = styled.div`
     &[value="true"]::after {
       content: "✓";
     }
+
+    &:focus::after {
+      outline: rgba(0, 103, 244, 0.247) auto 5px;
+      outline-offset: -2px;
+    }
   }
 
   ${InputWrapper} {
@@ -252,7 +257,10 @@ const CollectionCreate = () => {
     if (isValid) {
       const schema = generateSchema(collectionName, collectionFields)
       axios.post(`http://localhost:4000/data/create`, { schema })
-        .then(res => console.log(res))
+        .then(res => {
+          console.log(`/${schema.title}`)
+          window.location.pathname = `/${schema.title}`
+        })
         .catch(err => console.error(err))
     }
   }

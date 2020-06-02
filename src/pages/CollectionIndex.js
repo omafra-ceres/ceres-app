@@ -29,7 +29,7 @@ const DeleteCollectionButton = styled.button`
   color: red;
   font-size: 12px;
   font-weight: bold;
-  margin-left: 50px;
+  margin-left: 25px;
 `
 
 const CollectionIndex = () => {
