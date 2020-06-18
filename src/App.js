@@ -4,18 +4,35 @@ import CollectionIndex from './pages/CollectionIndex'
 import CollectionCreate from './pages/CollectionCreate'
 import CollectionShow from './pages/CollectionShow'
 import Header from './components/Header'
-import styled, { ThemeProvider } from 'styled-components'
+import styled, { ThemeProvider, css } from 'styled-components'
+
+// set of styles to hide elements from sighted users
+// they will still appear in the document flow for screen readers
+const visiblyHiddenStyle = css`
+  position:absolute;
+  left:-10000px;
+  top:auto;
+  width:1px;
+  height:1px;
+  overflow:hidden;
+`
 
 const theme = {
-  blue: "#004fff",
+  blue: "#000fff",
   red: "#ba2d0b",
   black: "#050505",
-  headerSize: "24px"
+  text: "#444444",
+  headerSize: "24px",
+  visiblyHidden: visiblyHiddenStyle
 }
 
 const Container = styled.div`
   margin: 70px 0 0;
   padding: 20px 25px;
+
+  * {
+    box-sizing: border-box;
+  }
 `
 
 function App() {
