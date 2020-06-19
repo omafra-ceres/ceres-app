@@ -1,10 +1,11 @@
 import React from 'react'
 import styled, { css } from 'styled-components'
+import Select from 'react-select'
 
 const inlineStyle = css`
   align-items: center;
   flex-direction: row-reverse;
-  justify-self: flex-start;
+  justify-content: flex-end;
   
   [direction="row"] > &:not(:first-child) {
     margin-left: 0;
@@ -24,8 +25,14 @@ const InputWrapper = styled.div`
 
   ${p => p.inline ? inlineStyle : ""}
 
-  input, select, textarea {
+  > input, > textarea {
     ${ p => p.hasError ? "border-color: red;" : "" }
+
+    &:focus {
+      outline: none;
+      border-color: #2684ff;
+      box-shadow: 0 0 0 1px #2684ff;
+    }
   }
 
   label {
@@ -38,7 +45,6 @@ const Label = styled.label`
   font-size: 12px;
   font-weight: bold;
   line-height: 16px;
-  text-transform: uppercase;
 
   ${ p => p.hasError ? "color: red;" : "" }
 
@@ -49,7 +55,7 @@ const Label = styled.label`
 
 const Input = styled.input`
   border: 1px solid gray;
-  border-radius: 4px;
+  border-radius: 1px;
   box-sizing: border-box;
   font-size: 16px;
   height: 30px;
@@ -67,7 +73,7 @@ const Input = styled.input`
 
 const Textarea = styled.textarea`
   border: 1px solid gray;
-  border-radius: 4px;
+  border-radius: 1px;
   box-sizing: border-box;
   font-size: 16px;
   height: 90px;
@@ -83,25 +89,60 @@ const Textarea = styled.textarea`
   }
 `
 
-const Select = styled.select`
-  border: 1px solid gray;
-  border-radius: 4px;
-  box-sizing: border-box;
-  font-size: 16px;
-  height: 30px;
-  margin: 5px 0 0;
-  max-width: 200px;
-  padding: 5px 10px;
-  
-  ${ p => p.hasError ? "border-color: red;" : "" }
+const StyledSelect = styled(Select).attrs(() => ({
+  classNamePrefix: "styled-select"
+}))`
+  margin-top: 5px;
 
-  ${InputWrapper}[disabled] & {
-    border-color: #aaa;
-    color: #aaa;
+  .styled-select__control {
+    border: 1px solid gray;
+    border-radius: 1px;
+    font-size: 16px;
+    height: 30px;
+    max-width: 200px;
+    min-height: 30px;
+
+    &:hover {
+      border-color: gray;
+    }
+  }
+  
+  .styled-select__control--is-focused {
+    border-color: #2684ff;
+    box-shadow: 0 0 0 1px #2684ff;
+  }
+
+  .styled-select__value-container {
+    height: 30px;
+    padding: 0 0 0 10px;
+  }
+  
+  .styled-select__input {
+    margin: 0;
+  }
+
+  .styled-select__indicators-container {
+    height: 30px;
+  }
+  
+  .styled-select__indicator-separator {
+    display: none;
+  }
+  
+  .styled-select__dropdown-indicator {
+    padding: 0 8px;
+  }
+  
+  .styled-select__menu {
+    border: 1px solid #2684ff;
+    border-top: none;
+    box-shadow: 0 -2px 0 -1px white, 0 0 0 1px #2684ff;
+    border-radius: 1px;
+    margin-top: -1px;
   }
 `
 
-const Checkbox = styled.input.attrs(props => ({
+const Checkbox = styled.input.attrs(() => ({
   type: "checkbox"
 }))`
   height: 20px;
@@ -112,7 +153,7 @@ const Checkbox = styled.input.attrs(props => ({
   &::after {
     background: white;
     border: 1px solid gray;
-    border-radius: 4px;
+    border-radius: 1px;
     bottom: 0;
     content: "";
     font-size: 16px;
@@ -129,9 +170,13 @@ const Checkbox = styled.input.attrs(props => ({
     content: "✓";
   }
 
-  &:focus::after {
-    outline: rgba(0, 103, 244, 0.247) auto 5px;
-    outline-offset: -2px;
+  &:focus {
+    outline: none;
+
+    ::after {
+      border-color: #2684ff;
+      box-shadow: 0 0 0 1px #2684ff;
+    }
   }
 
   ${InputWrapper}[disabled] & {
@@ -174,7 +219,7 @@ const Description = styled.div`
 const inputs = {
   input: Input,
   checkbox: Checkbox,
-  select: Select,
+  select: StyledSelect,
   textarea: Textarea
 }
 
@@ -191,7 +236,6 @@ const InputContainer = ({
   onChange,
   type="text",
   errors=[],
-  options,
   className="",
   required,
   readonly,
@@ -208,11 +252,18 @@ const InputContainer = ({
     >
       <Label htmlFor={ id }>
         { label }
-        { required ? <RequiredSpan>(Required)</RequiredSpan> : "" }
+        { !required ? <RequiredSpan>(Optional)</RequiredSpan> : "" }
       </Label>
-      <InputTag {...{id, value, onChange, type, readOnly: readonly, ...internalProps}}>
-        { options ? options.map((op, i) => <option key={ i } value={op.value}>{ op.label }</option>) : null }
-      </InputTag>
+      <InputTag
+        {...{
+          id,
+          value,
+          onChange,
+          type,
+          readOnly: readonly,
+          ...internalProps
+        }}
+      />
       { description ? <Description>{ description }</Description> : "" }
       { errors.map((err, i) => <InputError key={ i }>{ err }</InputError>) }
     </InputWrapper>

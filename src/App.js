@@ -18,7 +18,7 @@ const visiblyHiddenStyle = css`
 `
 
 const theme = {
-  blue: "#000fff",
+  blue: "#266DE0",
   red: "#ba2d0b",
   black: "#050505",
   text: "#444444",

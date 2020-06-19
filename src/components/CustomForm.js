@@ -31,13 +31,14 @@ const formStyle = css`
 
 const rootTitleStyle = css`
   font-size: 18px;
-  margin-bottom: 15px;
+  margin-bottom: 30px;
   font-weight: 500;
 `
 
 const GroupLabel = styled(Label)`
   display: block;
-  margin-bottom: 5px;
+  font-size: 14px;
+  margin-bottom: 20px;
 
   #root > & {
     ${rootTitleStyle}
@@ -45,15 +46,15 @@ const GroupLabel = styled(Label)`
 `
 
 const formGroupStyles = css`
-  background: #eee;
-  border-radius: 4px;
-  padding: 12px 15px 15px;
+  background: #EBEBEB;
+  border-radius: 1px;
+  padding: 15px 20px 20px;
   width: 100%;
 `
 
 const FormGroupWrapper = styled.div`
   display: grid;
-  grid-gap: 10px;
+  grid-gap: 15px;
   grid-template: ${p => p.grid || "auto"};
 
   ${p => p.gridAreas
@@ -81,11 +82,16 @@ const buttonStyle = css`
   margin: 5px 0;
   padding: 5px;
   text-align: center;
-  text-transform: uppercase;
 
   &:disabled {
     border-color: #aaa;
     color: #aaa;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: #2684ff;
+    box-shadow: 0 0 0 1px #2684ff;
   }
 `
 
@@ -100,23 +106,31 @@ const Button = styled.button.attrs(props => ({
   }
 `
 
-const Submit = styled(Button).attrs(props => ({
-  type: "submit"
-}))`
-  background: ${p => p.theme.text};
-  color: white;
-`
-
-const Remove = styled(Button)`
-  border: none;
+const AddField = styled(Button)`
+  background: none;
+  border-color: #0000;
   box-shadow: none;
-  color: gray;
-  font-size: 28px;
-  font-weight: lighter;
-  grid-row: 2;
   height: 30px;
-  line-height: 0;
-  width: 30px;
+  margin-top: 20px;
+  min-width: unset;
+  padding-left: 38px;
+  position: relative;
+
+  &::before {
+    background: ${p => p.theme.blue};
+    border-radius: 50%;
+    color: white;
+    content: "+";
+    font-size: 24px;
+    font-weight: bolder;
+    height: 30px;
+    left: 0;
+    line-height: 26px;
+    position: absolute;
+    text-align: center;
+    top: -1px;
+    width: 30px;
+  }
 `
 
 const ButtonGroupContainer = styled.div`
@@ -139,10 +153,12 @@ const ButtonGroupContainer = styled.div`
 `
 
 const Toolbar = styled.div`
+  border-top: 1px solid #aaa;
   display: flex;
   flex-direction: row;
   /* margin: 10px 0; */
   flex-grow: 1;
+  padding-top: 20px;
 
   ${ ButtonGroupContainer } {
     margin: 0;
@@ -152,10 +168,9 @@ const Toolbar = styled.div`
     }
 
     button {
-      font-size: 10px;
+      font-size: 12px;
       font-weight: 500;
       margin: 0;
-      text-transform: unset;
 
       &:not(:disabled) + button {
         border-left: none;
@@ -182,6 +197,35 @@ const Toolbar = styled.div`
       }
     }
   }
+`
+
+const formStepStyle = css`
+  border-left: 2px solid #5B5B5B;
+  margin-bottom: 20px;
+  margin-left: 15px;
+  padding-left: 40px;
+  position: relative;
+
+  &::before {
+    background: #5B5B5B;
+    border: 14px solid white;
+    border-radius: 50%;
+    color: white;
+    content: "${p => p.step}";
+    font-size: 14px;
+    font-weight: bold;
+    height: 30px;
+    left: -29px;
+    line-height: 30px;
+    position: absolute;
+    text-align: center;
+    top: -22px;
+    width: 30px;
+  }
+`
+
+const FieldContainer = styled.div`
+  ${p => p.step ? formStepStyle : ""}
 `
 
 //////                            //////
@@ -216,7 +260,11 @@ const ButtonGroup = ({ actions }) => {
 }
 
 // This is required to allow our default fields to control their own labels, etc.
-const FieldTemplate = props => props.children
+const FieldTemplate = ({uiSchema, children}) => (
+  <FieldContainer step={ uiSchema["ui:form-step"] }>
+    { children }
+  </FieldContainer>
+)
 
 const ObjectFieldTemplate = ({
   title,
@@ -233,7 +281,7 @@ const ObjectFieldTemplate = ({
       { title ? (
         <GroupLabel>
           { title }
-          { title && required ? <RequiredSpan>(Required)</RequiredSpan> : "" }
+          {/* { title && !required ? <RequiredSpan>(Optional)</RequiredSpan> : "" } */}
         </GroupLabel>
       ) : "" }
       <FormGroupWrapper
@@ -270,10 +318,10 @@ const ArrayFieldToolbar = ({
     { label: "Remove field", value: removeItem, disabled: !permissions.hasRemove }
   ]
   return (
-    <Toolbar>
+    <Toolbar style={{ justifyContent: "space-between" }}>
       <ButtonGroup actions={ moveActions } />
-      <ButtonGroup actions={ addActions } />
       <ButtonGroup actions={ removeAction } />
+      {/* <ButtonGroup actions={ addActions } /> */}
     </Toolbar>
   )
 }
@@ -328,7 +376,7 @@ const ArrayFieldTemplate = ({
     >
       <GroupLabel hasError={ rawErrors.length }>
         { title }
-        { required ? <RequiredSpan>(Required)</RequiredSpan> : "" }
+        {/* { !required ? <RequiredSpan>(Optional)</RequiredSpan> : "" } */}
       </GroupLabel>
       { rawErrors.map((err, i) => <InputError key={ i }>{ err }</InputError>) }
       <FormGroupWrapper
@@ -337,7 +385,7 @@ const ArrayFieldTemplate = ({
       >
         { items.map(item => <ArrayFieldItem { ...item } />) }
       </FormGroupWrapper>
-      { canAdd ? <Button onClick={ onAddClick }>Add Field</Button> : "" }
+      { canAdd ? <AddField onClick={ onAddClick }>Add Field</AddField> : "" }
     </TemplateContainer>
   )
 }
@@ -361,14 +409,34 @@ const StringField = ({
     : schema.enum
       ? "select"
       : "text"
+    
+  const selectOptions = inputType === "select"
+    ? schema.enum.map((el, i) => ({
+        value: el,
+        label: schema.enumNames
+          ? schema.enumNames[i]
+          : el
+      }))
+    : null
+  
+  const inputValue = inputType === "select"
+    ? selectOptions.find(op => op.value === formData)
+    : formData || ""
+  
+  const handleChange = e => {
+    const value = inputType === "select"
+      ? e.value
+      : e.target.value
+    onChange(value, errorSchema)
+  }
   return (
     <InputContainer
       id={ idSchema["$id"] }
       label={ schema.title }
       type={ inputType }
-      value={ formData || "" }
+      value={ inputValue }
       errors={ rawErrors }
-      onChange={ e => onChange(e.target.value, errorSchema) }
+      onChange={ handleChange }
       options={ schema.enum && schema.enum.map((el, i) => ({
         value: el,
         label: schema.enumNames ? schema.enumNames[i] : el
@@ -418,7 +486,6 @@ const theme = {
 }
 
 const FormWithTheme = withTheme(theme)
-const StyledForm = styled(FormWithTheme)`${formStyle}`
-const Form = props => <StyledForm {...props}><Submit>Submit</Submit></StyledForm>
+const Form = styled(FormWithTheme)`${formStyle}`
 
 export default Form
