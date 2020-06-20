@@ -164,9 +164,10 @@ const FormActionsContainer = styled.div`
   }
 `
 
-// placeholder for page styles
 const Page = styled.div`
-  
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 `
 
 //////                            //////
@@ -184,7 +185,7 @@ const transformErrors = errors => errors
     return err
   })
 
-const generateSchema = ({ formData: { details, fields }}) => {
+const generateSchema = ({ details, fields }) => {
   const schemaObject = {
     title: details.name,
     type: "object",
@@ -217,7 +218,7 @@ const CollectionCreate = () => {
     const schema = generateSchema(formData)
     axios.post(`http://localhost:4000/data/create`, { details: formData.details, schema })
       .then(() => {
-        window.location.pathname = `/${schema.title}`
+        window.location.pathname = `/${formData.details.path}`
       })
       .catch(err => console.error(err))
   }

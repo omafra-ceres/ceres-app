@@ -16,6 +16,7 @@ const StyledHeader = styled.header`
   position: fixed;
   top: 0;
   width: 100%;
+  z-index: 1;
 
   h1 {
     font-size: ${ p => p.theme.headerSize };
