@@ -1,123 +1,223 @@
-import React from 'react'
-import Form from '@rjsf/core'
-import styled from 'styled-components'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
+import styled, { css } from 'styled-components'
 import axios from 'axios'
 
-const InputWrapper = styled.div`
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 20px;
+import Form from '../components/CustomForm'
+import Button, { AddField } from '../components/Button'
 
-  input, select {
-    ${ p => p.hasError ? "border-color: red;" : "" }
-    margin-bottom: 5px;
-  }
+import useModal from '../customHooks/useModal'
 
-  label {
-    ${ p => p.hasError ? "color: red" : "" }
+const Page = styled.div`
+  margin: 0 auto;
+
+  h1 {
+    font-size: ${ p => p.theme.headerSize };
   }
 `
 
-const InputError = styled.div`
-  color: red;
-  font-size: 12px;
+const AddRowButton = styled(AddField)`
+  margin: 20px 0;
+`
+
+const tableBorder = "2px solid #fff";
+
+const TableContainer = styled.div`
+  display: grid;
+  grid-auto-columns: fit-content(300px);
+  list-style: none;
+
+  > * {
+    border: ${tableBorder};
+
+    &:not(:nth-child(${p => p.columns}n)) {
+      border-right: none;
+    }
+    
+    &:nth-child(-n+${p => p.columns * 2}):not(:nth-child(-n+${p => p.columns})) {
+      border-top: ${tableBorder};
+    }
+  }
+`
+
+const TableColumnHeader = styled.div`
   font-weight: bold;
-  margin-left: 10px;
+  grid-row: 1;
+  padding: 10px 20px;
   position: relative;
 
-  &::before {
-    content: "•";
-    left: -10px;
-    position: absolute;
-  }
+  text-align: ${p => p.isNumeral ? "right" : "left"};
+
+  /* styling to highlight items in column when column header is hovered over */
+  /* &:hover {
+    background: #D9EAD9;
+
+    & ~ *:nth-child(${p => p.columnTotal}n + ${p => p.column}) {
+      position: relative;
+
+      &::after {
+        ${p => p.theme.pseudoFill}
+
+        background: #0f01;
+        pointer-events: none;
+      }
+    }
+  } */
 `
 
-const InputContainer = ({ id, label, value, onChange, type="text", error, options }) => (
-  <InputWrapper hasError={ !!error }>
-    <label htmlFor={ id }>{ label }</label>
-    {
-      type === "select"
-        ? <select {...{id, value, onChange, type}}>
-            { options.map((op, i) => <option key={ i } value={op.value}>{ op.label }</option>) }
-          </select>
-        : <input {...{id, value, onChange, type}} />
-    }
-    { error ? <InputError>{ error }</InputError> : "" }
-  </InputWrapper>
-)
+const numeralStyles = css`
+  font-family: Courier, monospace;
+  text-align: right;
+`
 
-const ObjectFieldTemplate = ({ properties, title, idSchema: { $id: id }}) => {
+const TableRowItem = styled.div`
+  background: ${p => p.row % 2 === 1 ? "#ebebeb" : "white"};
+  border-top: none;
+  grid-column: ${p => p.column};
+  grid-row: ${p => p.row};
+  min-width: 150px;
+  padding: 5px 20px;
+  
+  ${p => p.isNumeral ? numeralStyles : ""}
+`
+
+const Table = ({ schema={}, items=[] }) => {
+  const columns = Object.keys(schema.properties || {}).map(key => ({
+    label: key,
+    numeral: schema.properties[key].type === "number"
+  }))
   return (
-    <div>
-      <label htmlFor={id}>{title}</label>
-      { properties.map(({ content: { props: { schema: { title, type }, onChange, errorSchema, idSchema: { $id: id }}}}) => {
-        const handleChange = e => {
-          const value = ["number", "integer"].includes(type) ? parseFloat(e.target.value) : e.target.value
-          onChange(value, errorSchema)
-        }
-        // console.log("field: ", item)
-        return (
-          <InputContainer
-            key={ id }
-            id={ id }
-            label={ title }
-            // value={ formData[item.name] || "" }
-            onChange={ handleChange }
-            type={ type }
-          />
-        )
-      }) }
-    </div>
+    <TableContainer columns={ schema ? columns.length : "" }>
+      { schema ? columns.map((col, i) => (
+        <TableColumnHeader
+          column={ i+1 }
+          columnTotal={columns.length}
+          isNumeral={ col.numeral }
+          key={`column-${i+1}-header`}
+        >
+          { col.label }
+        </TableColumnHeader>
+      )) : "" }
+      
+      { schema ? items.map((item, itemIndex) => (
+        <React.Fragment key={`row-${itemIndex+2}-items`}>
+          { columns.map((col, colIndex) => (
+            <TableRowItem
+              key={`row-${itemIndex+2}-col-${colIndex+1}`}
+              column={ colIndex + 1 }
+              row={ itemIndex + 2 }
+              isNumeral={ col.numeral }
+            >
+              { typeof item[col.label] === "string" ? item[col.label] : JSON.stringify(item[col.label]) }
+            </TableRowItem>
+          )) }
+        </React.Fragment>
+      )) : "" }
+    </TableContainer>
   )
 }
 
-const AddItem = ({ schema, handleSubmit }) => {
-  const onSubmit = ({formData}) => {
-    handleSubmit(formData)
+const StyledForm = styled(Form)`
+  min-width: 400px;
+`
+
+const FormToolbar = styled.div`
+  display: flex;
+  flex-direction: row;
+  margin-top: 30px;
+`
+
+const AddItemForm = ({ schema={}, pathname, onSubmit, closeModal }) => {
+  const [newItem, setNewItem] = useState({})
+  const addItemFormEl = useRef()
+
+  useEffect(() => {
+    const booleanFields = Object.keys(schema.properties)
+      .filter(key => {
+        return schema.properties[key].type === "boolean"
+      })
+    setNewItem(booleanFields.reduce((obj, field) => ({...obj, [field]: false}), {}))
+    addItemFormEl.current.formElement[0].focus()
+  }, [])
+
+  const handleSubmit = ({formData}) => {
+    console.log("submitting")
+    axios.post(`http://localhost:4000/data/${pathname.slice(1)}`, formData)
+      .then(res => {
+        onSubmit(res.data.item)
+      }).catch(console.error)
   }
+
+  const handleChange = ({formData}) => {
+    setNewItem(formData)
+  }
+
   return (
-    <Form
-      {...{ schema, ObjectFieldTemplate, onSubmit }}
+    <StyledForm
+      formData={ newItem }
+      schema={ schema }
+      onSubmit={ handleSubmit }
+      onChange={ handleChange }
       uiSchema={{ "ui:title": "Add Item" }}
-    />
+      ref={ addItemFormEl }
+    >
+      <FormToolbar>
+        <Button buttonType="fill" type="submit">Submit</Button>
+        <Button buttonType="text" onClick={ closeModal }>Cancel</Button>
+      </FormToolbar>
+    </StyledForm>
   )
 }
 
 const CollectionShow = ({ location: { pathname }}) => {
-  const [schema, setSchema] = React.useState({})
-  const [items, setItems] = React.useState([])
+  const [dataStructure, setDataStructure] = useState({})
+  const [items, setItems] = useState([])
+  const setModalState = useModal()[1]
+  
+  const onSubmit = useCallback((newItem) => {
+    setItems([...items, newItem])
+    setModalState({ isOpen: false })
+  }, [ items, setItems, setModalState ])
 
-  React.useEffect(() => {
+  useEffect(() => {
+    setModalState({
+      content: (
+        <AddItemForm
+          closeModal={() => setModalState({ isOpen: false })}
+          schema={dataStructure.schema}
+          {...{pathname, onSubmit}}
+        />
+      )
+    })
+  }, [setModalState, dataStructure, onSubmit, pathname])
+
+  useEffect(() => {
     axios.get(`http://localhost:4000/data/${pathname.slice(1)}`)
       .then(res => {
-        setSchema(res.data.schema)
+        setDataStructure(res.data.dataStructure)
         setItems(res.data.items)
       })
       .catch(console.error)
   },[ pathname ])
 
-  const handleSubmit = formData => {
-    axios.post(`http://localhost:4000/data/${pathname.slice(1)}`, formData)
-      .then(res => {
-        setItems([...items, res.data.item])
-      }).catch(console.error)
-  }
-
-  return (
-    <div>
-      This is a single collection
-
-      <ul>
-        { items.map(item => (
-          <li key={item._id}>
-            {JSON.stringify(item)}
-          </li>
-        ))}
-      </ul>
-
-      <AddItem {...{schema, handleSubmit}} />
-    </div>
+  const AddRow = () => (
+    <AddRowButton
+      onClick={() => setModalState({isOpen: true})}
+    >
+      Add Item
+    </AddRowButton>
   )
+
+  return dataStructure.details ? (
+    <Page>
+      <h1>{ dataStructure.details ? dataStructure.details.name : "" }</h1>
+      <div>{ dataStructure.details ? dataStructure.details.description : "" }</div>
+      <AddRow />
+      <Table
+        {...{schema: dataStructure.schema, items}}
+      />
+      <AddRow />
+    </Page>
+  ) : ""
 }
 
 export default CollectionShow

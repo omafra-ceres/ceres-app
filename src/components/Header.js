@@ -40,7 +40,7 @@ const Header = () => {
       <h1>Ceres (demo)</h1>
       <nav>
         <ul>
-          <li><Link to="/" className="nav-link">Collections</Link></li>
+          <li><Link to="/" className="nav-link">My Datasets</Link></li>
         </ul>
       </nav>
     </StyledHeader>

@@ -2,12 +2,9 @@ import React from 'react'
 import styled, { css } from 'styled-components'
 import { withTheme } from '@rjsf/core'
 
-import InputContainer, {
-  Label,
-  RequiredSpan,
-  InputError,
-  Description
-} from '../components/InputContainer'
+import InputContainer, { Label, InputError } from '../components/InputContainer'
+
+import { AddField, ButtonGroup } from '../components/Button'
 
 
 ////////////////////////////////////////
@@ -70,97 +67,14 @@ const TemplateContainer = styled.div`
   
 `
 
-const buttonStyle = css`
-  background: white;
-  border: 1px solid ${p => p.theme.text};
-  border-radius: 4px;
-  box-shadow: 0px 2px 2px #8888;
-  box-sizing: border-box;
-  color: ${p => p.theme.text};
-  font-size: 12px;
-  font-weight: bold;
-  margin: 5px 0;
-  padding: 5px;
-  text-align: center;
-
-  &:disabled {
-    border-color: #aaa;
-    color: #aaa;
-  }
-
-  &:focus {
-    outline: none;
-    border-color: #2684ff;
-    box-shadow: 0 0 0 1px #2684ff;
-  }
-`
-
-const Button = styled.button.attrs(props => ({
-  type: "button"
-}))`
-  ${ buttonStyle }
-  min-width: 100px;
-
-  &:active {
-    box-shadow: inset 0px 2px 2px #8884;
-  }
-`
-
-const AddField = styled(Button)`
-  background: none;
-  border-color: #0000;
-  box-shadow: none;
-  height: 30px;
-  margin-top: 20px;
-  min-width: unset;
-  padding-left: 38px;
-  position: relative;
-
-  &::before {
-    background: ${p => p.theme.blue};
-    border-radius: 50%;
-    color: white;
-    content: "+";
-    font-size: 24px;
-    font-weight: bolder;
-    height: 30px;
-    left: 0;
-    line-height: 26px;
-    position: absolute;
-    text-align: center;
-    top: -1px;
-    width: 30px;
-  }
-`
-
-const ButtonGroupContainer = styled.div`
-  align-items: center;
-  display: flex;
-  flex-direction: row;
-  margin: 10px 0;
-
-  > div {
-    color: ${p => p.theme.text};
-  }
-
-  button {
-    min-width: unset;
-  }
-
-  > *:not(:first-child) {
-    margin-left: 5px;
-  }
-`
-
 const Toolbar = styled.div`
   border-top: 1px solid #aaa;
   display: flex;
   flex-direction: row;
-  /* margin: 10px 0; */
   flex-grow: 1;
   padding-top: 20px;
 
-  ${ ButtonGroupContainer } {
+  .button-group {
     margin: 0;
 
     &:not(:first-child) {
@@ -233,31 +147,6 @@ const FieldContainer = styled.div`
 //////                            //////
 ////////////////////////////////////////
 
-
-const ButtonGroup = ({ actions }) => {
-  return actions.length > 1 ? (
-    <ButtonGroupContainer>
-      { actions.map(action => (
-        <Button
-          key={ action.label }
-          disabled={ action.disabled }
-          onClick={ action.value }
-        >
-          { action.label }
-        </Button>
-      ))}
-    </ButtonGroupContainer>
-  ) : (
-    <ButtonGroupContainer>
-      <Button
-        disabled={ actions[0].disabled }
-        onClick={ actions[0].value }
-      >
-        { actions[0].label }
-      </Button>
-    </ButtonGroupContainer>
-  )
-}
 
 // This is required to allow our default fields to control their own labels, etc.
 const FieldTemplate = ({uiSchema, children}) => (
@@ -408,7 +297,9 @@ const StringField = ({
     ? "textarea"
     : schema.enum
       ? "select"
-      : "text"
+      : schema.type === "string"
+        ? "text"
+        : schema.type
     
   const selectOptions = inputType === "select"
     ? schema.enum.map((el, i) => ({
@@ -465,7 +356,7 @@ const BooleanField = ({
     id={ idSchema["$id"] }
     label={ schema.title }
     type="checkbox"
-    value={ formData || "" }
+    value={ formData || false }
     errors={ rawErrors }
     checked={ !!formData }
     onChange={ e => onChange(e.target.checked, errorSchema) }
