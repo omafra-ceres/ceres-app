@@ -74,13 +74,15 @@ const TableRowItem = styled.div`
   border-top: none;
   grid-column: ${p => p.column};
   grid-row: ${p => p.row};
+  min-height: 52px;
   min-width: 150px;
-  padding: 5px 20px;
+  padding: 16px 20px;
   
   ${p => p.isNumeral ? numeralStyles : ""}
 `
 
 const Table = ({ schema={}, items=[] }) => {
+  const tableItems = items.length < 10 ? [...items, ...new Array(10 - items.length).fill({})] : items
   const columns = Object.keys(schema.properties || {}).map(key => ({
     label: key,
     numeral: schema.properties[key].type === "number"
@@ -98,7 +100,7 @@ const Table = ({ schema={}, items=[] }) => {
         </TableColumnHeader>
       )) : "" }
       
-      { schema ? items.map((item, itemIndex) => (
+      { schema ? tableItems.map((item, itemIndex) => (
         <React.Fragment key={`row-${itemIndex+2}-items`}>
           { columns.map((col, colIndex) => (
             <TableRowItem

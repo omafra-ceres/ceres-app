@@ -98,8 +98,9 @@ const CollectionIndex = () => {
       .catch(console.error)
   },[])
 
-  const handleDelete = dataStructure => {
-    axios.post("http://localhost:4000/data/delete", { dataStructure })
+  const handleDelete = (e, dataStructure) => {
+    e.preventDefault()
+    axios.post("http://localhost:4000/data/delete", dataStructure)
       .then(res => setDataStructures(res.data))
       .catch(console.error)
   }
@@ -118,7 +119,7 @@ const CollectionIndex = () => {
                 <span>{ data.name }</span>
                 <span>{ created }</span>
                 <span>{ data.status }</span>
-                <DeleteDataStructureButton onClick={() => handleDelete(data)}>Delete</DeleteDataStructureButton>
+                <DeleteDataStructureButton onClick={(e) => handleDelete(e, data)}>Delete</DeleteDataStructureButton>
               </Link>
             </DataStructureListItem>
           )
