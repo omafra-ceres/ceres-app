@@ -76,6 +76,7 @@ const DataStructureListItem = styled.li`
 const Page = styled.div`
   max-width: 1000px;
   margin: 0 auto;
+  padding: 20px 25px;
 
   h1 {
     font-size: ${ p => p.theme.headerSize };
@@ -86,7 +87,7 @@ const Page = styled.div`
   }
 `
 
-const CollectionIndex = () => {
+const DataIndex = () => {
   const [dataStructures, setDataStructures] = React.useState([])
 
   React.useEffect(() => {
@@ -130,4 +131,4 @@ const CollectionIndex = () => {
   )
 }
 
-export default CollectionIndex
+export default DataIndex

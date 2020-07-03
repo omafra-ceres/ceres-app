@@ -165,9 +165,10 @@ const FormActionsContainer = styled.div`
 `
 
 const Page = styled.div`
+  align-items: center;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  padding: 20px 25px;
 `
 
 //////                            //////
@@ -211,7 +212,7 @@ const nameToPath = name => (
     .replace(/[\s-_]+/g, "-")
 )
 
-const CollectionCreate = () => {
+const DataStructureCreate = () => {
   const [formData, setFormData] = React.useState(initialFormData)
 
   const handleSubmit = ({formData}) => {
@@ -247,4 +248,4 @@ const CollectionCreate = () => {
   )
 }
 
-export default CollectionCreate
+export default DataStructureCreate
