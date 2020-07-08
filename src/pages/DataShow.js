@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import styled from 'styled-components'
 import axios from 'axios'
 
@@ -15,6 +15,9 @@ import useModal from '../customHooks/useModal'
 //////                            //////
 
 const Page = styled.div`
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 70px);
   margin: 0 auto;
   padding: 20px 50px;
 
@@ -34,16 +37,22 @@ const FormToolbar = styled.div`
 `
 
 const AddRowButton = styled(AddField)`
-  display: block;
+  display: inline-flex;
   margin: 20px 0;
+  width: fit-content;
 `
 
 const TableWrap = styled.div`
-  margin-left: -50px;
-  overflow-x: auto;
+  /* border: 1px solid #aaa; */
+  /* border-radius: 1px; */
+  flex-grow: 1;
+  max-width: 100%;
+  overflow: hidden;
   position: relative;
-  padding: 0 50px;
-  width: calc(100% + 100px);
+`
+
+const DescriptionContainer = styled.div`
+
 `
 
 //////                            //////
@@ -51,6 +60,9 @@ const TableWrap = styled.div`
 //////                            //////
 ////////////////////////////////////////
 
+const Description = content => {
+
+}
 
 const AddItemForm = ({ schema={}, pathname, onSubmit, closeModal }) => {
   const [newItem, setNewItem] = useState({})
@@ -96,9 +108,11 @@ const AddItemForm = ({ schema={}, pathname, onSubmit, closeModal }) => {
 }
 
 const DataShow = ({ location: { pathname }}) => {
-  const [dataStructure, setDataStructure] = useState({})
-  const [items, setItems] = useState([])
+  const [{details, schema}, setDataStructure] = useState({})
+  const [items, setItems] = useState()
   const modalActions = useModal()[1]
+  // const [tableContainer, setTableContainer] = useState()
+  const tableContainer = useRef()
   
   const onSubmit = useCallback((newItem) => {
     setItems([...items, newItem])
@@ -106,20 +120,28 @@ const DataShow = ({ location: { pathname }}) => {
   }, [ items, setItems, modalActions ])
 
   useEffect(() => {
+    if (!schema) return
     modalActions.setContent((
       <AddItemForm
         closeModal={() => modalActions.close()}
-        schema={dataStructure.schema}
+        schema={schema}
         {...{pathname, onSubmit}}
       />
     ))
-  }, [modalActions, dataStructure, onSubmit, pathname])
+  }, [modalActions, schema, onSubmit, pathname])
 
   useEffect(() => {
+    const start = performance.now()
     axios.get(`http://localhost:4000/data/${pathname.slice(1)}`)
       .then(res => {
-        setDataStructure(res.data.dataStructure)
-        setItems(res.data.items)
+        const {items, dataStructure} = res.data
+        if (items.length < 10) {
+          items.push(...Array(10 - items.length).fill(""))
+        }
+        setDataStructure(dataStructure)
+        setItems(items)
+        const end = performance.now()
+        console.log(`time to fetch: ${Math.trunc((end - start) * 1000) / 1000}ms`)
       })
       .catch(console.error)
   },[ pathname ])
@@ -132,20 +154,24 @@ const DataShow = ({ location: { pathname }}) => {
     </AddRowButton>
   )
 
-  return dataStructure.details ? (
+  return details ? (
     <Page>
-      <h1>{ dataStructure.details ? dataStructure.details.name : "" }</h1>
-      <div>{ dataStructure.details ? dataStructure.details.description : "" }</div>
+      <h1>{ details.name }</h1>
+      <DescriptionContainer>{ details.description }</DescriptionContainer>
       <AddRow />
-      <TableWrap>
-        <Table
-          schema={ dataStructure.schema }
-          items={ items }
-          minItems={ 10 }
-          showDetails={ true }
-        />
+      <TableWrap
+        ref={tableContainer}
+      >
+        { schema && items ? (
+          <Table
+            parentNode={ tableContainer.current }
+            schema={ schema }
+            items={ items }
+            minItems={ 10 }
+          />
+        ) : "" }
       </TableWrap>
-      <AddRow />
+      {/* <AddRow /> */}
     </Page>
   ) : ""
 }
