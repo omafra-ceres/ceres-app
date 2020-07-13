@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, forwardRef } from 'react'
+import React, { useCallback, useMemo, forwardRef, useRef } from 'react'
 import styled from 'styled-components'
 import { VariableSizeGrid as Grid } from "react-window";
 
@@ -44,7 +44,6 @@ const TableCell = styled.div`
     background: white;
     font-weight: bold;
     grid-row: 1;
-    padding: 10px 20px;
     z-index: 1;
   }
 
@@ -53,7 +52,6 @@ const TableCell = styled.div`
     border-top: none;
     min-height: 52px;
     min-width: 150px;
-    padding: 16px 20px;
 
     &.row-odd {
       background: #fafafa;
@@ -170,7 +168,7 @@ const Table = ({
   }, [tableRows, columns])
 
   const rowHeights = useMemo(() => (
-    [60, ...Array(tableRows.length).fill(52)]
+    [65, ...Array(tableRows.length).fill(52)]
   ), [tableRows])
 
   const tableSize = useMemo(() => {
@@ -213,10 +211,10 @@ const Table = ({
     )
   }, [tableRows, columns])
 
-  const HeaderContainer = React.useRef()
-  const ContentContainer = React.useRef()
-  const ScrollContainerX = React.useRef()
-  const ScrollContainerY = React.useRef()
+  const HeaderContainer = useRef()
+  const ContentContainer = useRef()
+  const ScrollContainerX = useRef()
+  const ScrollContainerY = useRef()
 
   const handleScrollX = ({ scrollLeft }) => {
     HeaderContainer.current.scrollTo({ scrollLeft })
@@ -227,7 +225,7 @@ const Table = ({
     ContentContainer.current.scrollTo({ scrollTop })
   }
 
-  const customWheel = ({ deltaX: x, deltaY: y }) => {
+  const scrollAll = useCallback(({ x, y }) => {
     const { scrollLeft: l, scrollTop: t } = ContentContainer.current.state
     const { x: sx, y: sy } = tableSize.scroll
     const scrollLeft = sx < l + x ? sx : l + x
@@ -237,11 +235,15 @@ const Table = ({
     ContentContainer.current.scrollTo({ scrollLeft, scrollTop })
     ScrollContainerX.current.scrollTo({ scrollLeft })
     ScrollContainerY.current.scrollTo({ scrollTop })
+  }, [tableSize.scroll])
+
+  const handleWheel = ({ deltaX: x, deltaY: y }) => {
+    scrollAll({ x, y })
   }
 
   return (
     <div
-      onWheel={ customWheel }
+      onWheel={ handleWheel }
     >
       <Grid
         ref={ HeaderContainer }
