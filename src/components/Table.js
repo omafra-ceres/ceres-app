@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState, useEffect } from 'react'
+import React, { useCallback, useMemo, forwardRef } from 'react'
 import styled from 'styled-components'
 import { VariableSizeGrid as Grid } from "react-window";
 
@@ -94,7 +94,39 @@ const getCellClass = (isHeader, dataType, rowIndex) => {
   return classNames.join(" ")
 }
 
-const Table = ({ schema={}, items=[], minItems=10, parentNode }) => {
+const TableScroll = forwardRef(({
+  onScroll,
+  height,
+  width,
+  scrollWidth,
+  scrollHeight
+}, ref) => (
+  <Grid
+    ref={ ref }
+    onScroll={ onScroll }
+    columnCount={ 1 }
+    columnWidth={ () => scrollWidth }
+    height={ height }
+    rowCount={ 1 }
+    rowHeight={ () => scrollHeight }
+    width={ width }
+    style={{
+      right: 0,
+      bottom: 0,
+      position: "absolute",
+      zIndex: 2
+    }}
+  >
+    { () => <div /> }
+  </Grid>
+))
+
+const Table = ({
+  schema={},
+  items=[],
+  minItems=10,
+  parentNode
+}) => {
   const tableRows = useMemo(() => {
     if (items.length > minItems) return items
     return [
@@ -169,8 +201,6 @@ const Table = ({ schema={}, items=[], minItems=10, parentNode }) => {
       ? label
       : (tableRows[rowIndex - 1] || {})[label]
 
-    if (isHeader) return null
-
     return (
       <TableCell
         className={getCellClass(isHeader, dataType, rowIndex)}
@@ -182,40 +212,6 @@ const Table = ({ schema={}, items=[], minItems=10, parentNode }) => {
       </TableCell>
     )
   }, [tableRows, columns])
-
-  const innerElementType = React.forwardRef(({ children, ...innerProps }, ref) => {
-    const headers = columns.map((col, i) => {
-      const {label, dataType, details} = col
-      return (
-        <TableCell
-          className={getCellClass(true, dataType, 0)}
-          key={ i }
-          style={{
-            position: "absolute",
-            top: 0,
-            left: columnWidths.slice(0,i).reduce((w, c) => w + c, 0),
-            width: columnWidths[i],
-            height: rowHeights[0]
-          }}
-        >
-          { label }
-          <HeaderDetails>{ details }</HeaderDetails>
-        </TableCell>
-      )
-    })
-    return (
-      <div ref={ ref } {...innerProps} >
-        { headers }
-        { children }
-      </div>
-    )
-  })
-
-  useEffect(() => {
-    const grid = document.querySelector(".Grid")
-    const headers = document.getElementsByClassName("table-header")
-    grid.prepend(...headers)
-  }, [])
 
   const HeaderContainer = React.useRef()
   const ContentContainer = React.useRef()
@@ -247,9 +243,7 @@ const Table = ({ schema={}, items=[], minItems=10, parentNode }) => {
     <div
       onWheel={ customWheel }
     >
-      {/* <CustomScroll /> */}
       <Grid
-        // onScroll={ handleScroll }
         ref={ HeaderContainer }
         className="Grid grid-headers-container"
         columnCount={(columnWidths || []).length}
@@ -258,7 +252,6 @@ const Table = ({ schema={}, items=[], minItems=10, parentNode }) => {
         rowCount={1}
         rowHeight={index => rowHeights[index]}
         width={tableSize.width}
-        // innerElementType={innerElementType}
         style={{
           boxShadow: "0 2px 3px #aaa8",
           overflow: "hidden",
@@ -270,7 +263,6 @@ const Table = ({ schema={}, items=[], minItems=10, parentNode }) => {
       </Grid>
       <Grid
         ref={ ContentContainer }
-        // onScroll={ handleScroll }
         className="Grid"
         columnCount={(columnWidths || []).length}
         columnWidth={index => columnWidths[index]}
@@ -278,7 +270,6 @@ const Table = ({ schema={}, items=[], minItems=10, parentNode }) => {
         rowCount={(rowHeights || []).length}
         rowHeight={index => rowHeights[index]}
         width={tableSize.width}
-        innerElementType={innerElementType}
         style={{
           overflow: "hidden",
           position: "absolute",
@@ -287,44 +278,22 @@ const Table = ({ schema={}, items=[], minItems=10, parentNode }) => {
       >
         {Cell}
       </Grid>
-      <Grid
+      <TableScroll
         ref={ ScrollContainerX }
         onScroll={ handleScrollX }
-        className="Grid scroll-control"
-        columnCount={ 1 }
-        columnWidth={ () => (columnWidths || [0]).reduce((w, c) => w + c, 0) }
-        height={15}
-        rowCount={ 1 }
-        rowHeight={ () => (rowHeights || [0]).reduce((h, r) => h + r, 0) }
-        width={tableSize.width}
-        style={{
-          bottom: 0,
-          position: "absolute",
-          zIndex: 2,
-          // pointerEvents: "none"
-        }}
-      >
-        { () => <div /> }
-      </Grid>
-      <Grid
+        height={ 15 }
+        width={ tableSize.width }
+        scrollWidth={ (columnWidths || [0]).reduce((w, c) => w + c, 0) }
+        scrollHeight={ (rowHeights || [0]).reduce((h, r) => h + r, 0) }
+      />
+      <TableScroll
         ref={ ScrollContainerY }
         onScroll={ handleScrollY }
-        className="Grid scroll-control"
-        columnCount={ 1 }
-        columnWidth={ () => (columnWidths || [0]).reduce((w, c) => w + c, 0) }
-        height={tableSize.height}
-        rowCount={ 1 }
-        rowHeight={ () => (rowHeights || [0]).reduce((h, r) => h + r, 0) }
-        width={15}
-        style={{
-          right: 0,
-          position: "absolute",
-          zIndex: 2,
-          // pointerEvents: "none"
-        }}
-      >
-        { () => <div /> }
-      </Grid>
+        height={ tableSize.height }
+        width={ 15 }
+        scrollWidth={ (columnWidths || [0]).reduce((w, c) => w + c, 0) }
+        scrollHeight={ (rowHeights || [0]).reduce((h, r) => h + r, 0) }
+      />
     </div>
   )
 }
