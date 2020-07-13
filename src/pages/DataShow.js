@@ -213,7 +213,7 @@ const DataShow = ({ location: { pathname }}) => {
       ...details,
       ...newDetails
     }})
-  }, [details, schema])
+  }, [details, schema, modalActions])
   
   const editDetailsAction = () => {
     modalActions.setContent((
@@ -228,8 +228,13 @@ const DataShow = ({ location: { pathname }}) => {
 
   const ActionBar = ({ actions }) => (
     <ActionContainer>
-      { actions.map(action => (
-        <button onClick={ action.action }>{ action.label }</button>
+      { actions.map((action, i) => (
+        <button
+          key={ i }
+          onClick={ action.action }
+        >
+          { action.label }
+        </button>
       )) }
     </ActionContainer>
   )
