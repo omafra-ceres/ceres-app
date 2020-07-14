@@ -176,12 +176,12 @@ const Table = ({
     const contentHeight = (rowHeights || [0]).reduce((h, r) => h + r, 0)
     const { offsetWidth, offsetHeight } = parentNode
 
-    const tableWidth = Math.min(contentWidth, offsetWidth)
-    const tableHeight = Math.min(contentHeight, offsetHeight)
+    const tableWidth = contentWidth < offsetWidth ? contentWidth : offsetWidth
+    const tableHeight = contentHeight < offsetHeight ? contentHeight : offsetHeight
 
-    const scrollX = Math.max(contentWidth - tableWidth + 15, 0)
-    const scrollY = Math.max(contentHeight - tableHeight + 15, 0)
-    
+    const scrollX = (contentWidth - tableWidth) > 0 ? (contentWidth - tableWidth) + 15 : 0
+    const scrollY = (contentHeight - tableHeight) > 0 ? (contentHeight - tableHeight) + 15 : 0
+
     return {
       width: tableWidth,
       height: tableHeight,
@@ -233,13 +233,16 @@ const Table = ({
 
     HeaderContainer.current.scrollTo({ scrollLeft })
     ContentContainer.current.scrollTo({ scrollLeft, scrollTop })
-    ScrollContainerX.current.scrollTo({ scrollLeft })
-    ScrollContainerY.current.scrollTo({ scrollTop })
+    if (ScrollContainerX.current) ScrollContainerX.current.scrollTo({ scrollLeft })
+    if (ScrollContainerY.current) ScrollContainerY.current.scrollTo({ scrollTop })
   }, [tableSize.scroll])
 
-  const handleWheel = ({ deltaX: x, deltaY: y }) => {
-    scrollAll({ x, y })
-  }
+  const handleWheel = useCallback(({ deltaX: x, deltaY: y }) => {
+    const { scroll } = tableSize
+    if (scroll.x || scroll.y) {
+      scrollAll({ x, y })
+    }
+  }, [tableSize, scrollAll])
 
   return (
     <div
@@ -268,7 +271,7 @@ const Table = ({
         className="Grid"
         columnCount={(columnWidths || []).length}
         columnWidth={index => columnWidths[index]}
-        height={tableSize.height - 15}
+        height={tableSize.height - (tableSize.scroll.x ? 15 : 0)}
         rowCount={(rowHeights || []).length}
         rowHeight={index => rowHeights[index]}
         width={tableSize.width}
@@ -280,22 +283,26 @@ const Table = ({
       >
         {Cell}
       </Grid>
-      <TableScroll
-        ref={ ScrollContainerX }
-        onScroll={ handleScrollX }
-        height={ 15 }
-        width={ tableSize.width }
-        scrollWidth={ (columnWidths || [0]).reduce((w, c) => w + c, 0) }
-        scrollHeight={ (rowHeights || [0]).reduce((h, r) => h + r, 0) }
-      />
-      <TableScroll
-        ref={ ScrollContainerY }
-        onScroll={ handleScrollY }
-        height={ tableSize.height }
-        width={ 15 }
-        scrollWidth={ (columnWidths || [0]).reduce((w, c) => w + c, 0) }
-        scrollHeight={ (rowHeights || [0]).reduce((h, r) => h + r, 0) }
-      />
+      { tableSize.scroll.x ? (
+        <TableScroll
+          ref={ ScrollContainerX }
+          onScroll={ handleScrollX }
+          height={ 15 }
+          width={ tableSize.width }
+          scrollWidth={ (columnWidths || [0]).reduce((w, c) => w + c, 0) }
+          scrollHeight={ (rowHeights || [0]).reduce((h, r) => h + r, 0) }
+        />
+      ) : "" }
+      { tableSize.scroll.y ? (
+        <TableScroll
+          ref={ ScrollContainerY }
+          onScroll={ handleScrollY }
+          height={ tableSize.height }
+          width={ 15 }
+          scrollWidth={ (columnWidths || [0]).reduce((w, c) => w + c, 0) }
+          scrollHeight={ (rowHeights || [0]).reduce((h, r) => h + r, 0) }
+        />
+      ) : "" }
     </div>
   )
 }

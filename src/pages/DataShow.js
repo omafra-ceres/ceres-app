@@ -23,6 +23,7 @@ const Page = styled.div`
 
   h1 {
     font-size: ${ p => p.theme.headerSize };
+    margin-left: 25px;
   }
 `
 
@@ -47,6 +48,7 @@ const TableWrap = styled.div`
 const DescriptionContainer = styled.div`
   width: 100%;
   max-width: 800px;
+  margin-left: 25px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -57,6 +59,7 @@ const ActionContainer = styled.div`
   display: flex;
   flex-direction: row;
   margin-top: 10px;
+  padding: 0 10px;
 
   > button {
     border: none;
