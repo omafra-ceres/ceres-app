@@ -1,6 +1,8 @@
 import React, { useCallback, useMemo, forwardRef, useRef, useState, useEffect } from 'react'
 import styled from 'styled-components'
-import { VariableSizeGrid as Grid } from "react-window";
+import { VariableSizeGrid as Grid } from 'react-window'
+
+import { Input } from './InputContainer'
 
 const headerHeight = 65
 const rowHeight = 52
@@ -39,6 +41,7 @@ const Ex = styled.span`
 
 const TableCell = styled.div`
   border-right: 2px solid white;
+  color: black;
   font-family: sans-serif;
   padding: 16px 20px;
 
@@ -84,17 +87,25 @@ const TableCell = styled.div`
 
   input {
     background: inherit;
-    border: 1px solid transparent;
+    border-color: transparent;
+    color: inherit;
     font: inherit;
+    height: unset;
     margin: 0;
+    max-width: unset;
     padding: 0;
     text-align: inherit;
     width: 100%;
 
+    &[disabled] {
+      border-color: transparent;
+      color: inherit;
+    }
+
     &:focus {
       background: white;
-      border-color: #444;
-      outline: none;
+      border-color: #2684ff;
+      /* outline: none; */
     }
   }
 `
@@ -126,16 +137,16 @@ const countEmpty = (tableSize, contentSize, fillSize) => {
   return diff < 1 ? 0 : Math.ceil(diff / fillSize)
 }
 
-const addEmptyRows = (items, parent) => {
+const addEmptyRows = (heights, parent) => {
   const { offsetHeight: height } = parent
-  const contentHeight = (items.length * rowHeight) + headerHeight
+  const contentHeight = (heights.length * rowHeight) + headerHeight
 
   const emptyRows = countEmpty(height - 15, contentHeight, rowHeight)
-  if (emptyRows === 0) return items
+  if (emptyRows === 0) return heights
 
   return [
-    ...items,
-    ...Array(emptyRows).fill({})
+    ...heights,
+    ...Array(emptyRows).fill(rowHeight)
   ]
 }
 
@@ -203,13 +214,13 @@ const ColumnHeaders = forwardRef(({
       if (isEditing) inputEl.current.select()
     }, [isEditing])
     
-    return (
+    return label ? (
       <TableCell
         className={ `data-${dataType} table-header` }
         style={ style }
         onClick={ handleClick }
       >
-        <input
+        <Input
           ref={ inputEl }
           value={ header }
           disabled={ !isEditing }
@@ -218,6 +229,11 @@ const ColumnHeaders = forwardRef(({
         />
         <HeaderDetails>{ details }</HeaderDetails>
       </TableCell>
+    ) : (
+      <TableCell
+        {...{style}}
+        className="table-header"
+      />
     )
   }, [ headers, canEdit ])
   
@@ -246,19 +262,13 @@ const Table = ({
   items=[],
   parentNode
 }) => {
-  const [tableRows, setTableRows] = useState(items)
   const columns = useMemo(() => getColumns(schema), [schema])
-
-  useEffect(() => {
-    setTableRows(addEmptyRows(items, parentNode))
-  }, [items, parentNode])
-
   const columnWidths = useMemo(() => {
     let widths = columns.map(col => {
       let { label, dataType, width } = col
       
       if (!["boolean", "number"].includes(dataType)) {
-        tableRows.forEach(row => {
+        items.forEach(row => {
           const cellWidth = getTextWidth(row[label], "normal 16px sans-serif")
           width = Math.max(cellWidth, width)
         })
@@ -270,7 +280,13 @@ const Table = ({
     widths = addEmptyColumns(widths, parentNode)
     widths[widths.length - 1] -= cellBorder
     return widths
-  }, [tableRows, columns, parentNode])
+  }, [items, columns, parentNode])
+
+  const rowHeights = useMemo(() => {
+    let heights = Array(items.length).fill(rowHeight)
+    heights = addEmptyRows(heights, parentNode)
+    return heights
+  }, [items, parentNode])
 
   const tableSize = useMemo(() => {
     const { offsetWidth, offsetHeight } = parentNode
@@ -283,7 +299,7 @@ const Table = ({
 
   const Cell = useCallback(({ columnIndex, rowIndex, style }) => {
     const {label, dataType} = columns[columnIndex] || {}
-    const item = (tableRows[rowIndex] || {})[label]
+    const item = (items[rowIndex] || {})[label]
     const isLastofRow = columnIndex + 1 === columnWidths.length
 
     return (
@@ -295,7 +311,7 @@ const Table = ({
         { typeof item === "string" ? item : JSON.stringify(item) }
       </TableCell>
     )
-  }, [tableRows, columns, columnWidths.length])
+  }, [items, columns, columnWidths.length])
 
   const HeaderContainer = useRef()
 
@@ -306,7 +322,7 @@ const Table = ({
   }, [])
 
   return (
-    <div>
+    <>
       <ColumnHeaders
         ref={ HeaderContainer }
         columnCount={ (columnWidths || []).length }
@@ -320,10 +336,11 @@ const Table = ({
         columnCount={(columnWidths || []).length}
         columnWidth={index => columnWidths[index]}
         height={tableSize.height - headerHeight}
-        rowCount={(tableRows || []).length}
+        rowCount={(rowHeights || []).length}
         rowHeight={() => rowHeight}
         width={tableSize.width}
         style={{
+          overflow: "scroll",
           position: "absolute",
           top: headerHeight,
           zIndex: 1
@@ -331,7 +348,7 @@ const Table = ({
       >
         {Cell}
       </Grid>
-    </div>
+    </>
   )
 }
 

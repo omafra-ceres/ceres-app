@@ -27,12 +27,6 @@ const InputWrapper = styled.div`
 
   > input, > textarea {
     ${ p => p.hasError ? "border-color: red;" : "" }
-
-    &:focus {
-      outline: none;
-      border-color: #2684ff;
-      box-shadow: 0 0 0 1px #2684ff;
-    }
   }
 
   label {
@@ -40,20 +34,33 @@ const InputWrapper = styled.div`
   }
 `
 
-const Label = styled.label`
+const Label = styled.label.attrs(p => ({
+  ...p.hasError && {borderColor: "red"}
+}))`
   color: ${p => p.theme.text};
   font-size: 12px;
   font-weight: bold;
   line-height: 16px;
-
-  ${ p => p.hasError ? "color: red;" : "" }
 
   ${InputWrapper}[disabled] & {
     color: #aaa;
   }
 `
 
-const Input = styled.input`
+const focusStyles = css`
+  outline: none;
+  border-color: #2684ff;
+  box-shadow: 0 0 0 1px #2684ff;
+`
+
+const disabledStyles = css`
+  border-color: #aaa;
+  color: #aaa;
+`
+
+const Input = styled.input.attrs(p => ({
+  ...p.hasError && {borderColor: "red"}
+}))`
   border: 1px solid gray;
   border-radius: 1px;
   box-sizing: border-box;
@@ -63,15 +70,18 @@ const Input = styled.input`
   max-width: 200px;
   padding: 5px 10px;
   
-  ${ p => p.hasError ? "border-color: red;" : "" }
+  ${InputWrapper}[disabled] &, &[disabled] {
+    ${disabledStyles}
+  }
 
-  ${InputWrapper}[disabled] & {
-    border-color: #aaa;
-    color: #aaa;
+  &:focus {
+    ${focusStyles}
   }
 `
 
-const Textarea = styled.textarea`
+const Textarea = styled.textarea.attrs(p => ({
+  ...p.hasError && {borderColor: "red"}
+}))`
   border: 1px solid gray;
   border-radius: 1px;
   box-sizing: border-box;
@@ -81,11 +91,12 @@ const Textarea = styled.textarea`
   max-width: 200px;
   padding: 5px 10px;
   
-  ${ p => p.hasError ? "border-color: red;" : "" }
+  ${InputWrapper}[disabled] &, &[disabled] {
+    ${disabledStyles}
+  }
 
-  ${InputWrapper}[disabled] & {
-    border-color: #aaa;
-    color: #aaa;
+  &:focus {
+    ${focusStyles}
   }
 `
 
