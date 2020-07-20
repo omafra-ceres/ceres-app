@@ -1,6 +1,7 @@
 import React from 'react'
 import styled from 'styled-components'
 import axios from 'axios'
+import { v4 as uuid } from 'uuid'
 
 import Form from '../components/CustomForm'
 
@@ -195,8 +196,9 @@ const generateSchema = ({ details, fields }) => {
   }
 
   fields.forEach(field => {
-    if (field.required) schemaObject.required.push(field.name)
-    schemaObject.properties[field.name] = {
+    const id = uuid()
+    if (field.required) schemaObject.required.push(id)
+    schemaObject.properties[id] = {
       title: field.name,
       type: field.type
     }

@@ -130,7 +130,10 @@ const EditDetailsForm = ({ pathname, onSubmit, closeModal, details }) => {
   }, [])
 
   const handleSubmit = ({formData}) => {
-    axios.post(`http://localhost:4000/data/${pathname.slice(1)}/update`, {details: formData})
+    axios.post(`http://localhost:4000/data/${pathname.slice(1)}/update`, {
+      type: "details",
+      details: formData
+    })
       .then(() => {
         onSubmit(newDetails)
       }).catch(console.error)
@@ -177,14 +180,11 @@ const DataShow = ({ location: { pathname }}) => {
   const tableContainer = useRef()
   
   useEffect(() => {
-    const start = performance.now()
     axios.get(`http://localhost:4000/data/${pathname.slice(1)}`)
       .then(res => {
         const {items, dataStructure} = res.data
         setDataStructure(dataStructure)
         setItems(items)
-        const end = performance.now()
-        console.log(`time to fetch: ${Math.trunc((end - start) * 1000) / 1000}ms`)
       })
       .catch(console.error)
   },[ pathname ])
@@ -225,6 +225,34 @@ const DataShow = ({ location: { pathname }}) => {
     modalActions.open()
   }
 
+  const editHeaderAction = useCallback((columnIndex, newHeader) => {
+    const id = Object.keys(schema.properties)[columnIndex]
+    const properties = Object.keys(schema.properties).reduce((obj, key) => {
+      obj[key] = {...schema.properties[key]}
+      return obj
+    }, {})
+    properties[id].title = newHeader
+
+    const oldSchema = {...schema}
+    const newSchema = {
+      ...schema,
+      properties
+    }
+    
+    setDataStructure({ details, schema: newSchema })
+    axios.post(`http://localhost:4000/data/${pathname.slice(1)}/update`, {
+      type: "headers",
+      headers: {
+        [id]: {
+          title: newHeader
+        }
+      }
+    }).catch(err => {
+        setDataStructure({ details, schema: oldSchema })
+        console.error(err)
+      })
+  }, [ schema, details, pathname ])
+
   const ActionBar = ({ actions }) => (
     <ActionContainer>
       { actions.map((action, i) => (
@@ -254,6 +282,7 @@ const DataShow = ({ location: { pathname }}) => {
             parentNode={ tableContainer.current }
             schema={ schema }
             items={ items }
+            editHeader={ editHeaderAction }
           />
         ) : "" }
       </TableWrap>

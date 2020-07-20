@@ -36,7 +36,7 @@ const useModal = () => {
     return () => {
       listeners = listeners.filter(listener => listener !== newListener)
     }
-  }, [])
+  }, [newListener])
   return [state, actions]
 }
 

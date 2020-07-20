@@ -164,18 +164,17 @@ const addEmptyColumns = (columns=[], parent) => {
 }
 
 const getColumns = schema => {
-  const labels = Object.keys(schema.properties || {})
-  const columns = labels.map(key => {
-    const label = key
-    const dataType = schema.properties[key].type
-    const details = `type: ${schema.properties[key].type}${schema.required.includes(key) ? "" : " (optional)"}`
+  const columnIds = Object.keys(schema.properties || {})
+  const columns = columnIds.map(id => {
+    const label = schema.properties[id].title
+    const dataType = schema.properties[id].type
+    const details = `type: ${schema.properties[id].type}${schema.required.includes(id) ? "" : " (optional)"}`
 
     const labelWidth = getTextWidth(label, "bold 16px sans-serif")
     const detailsWidth = getTextWidth(details, "normal 10px sans-serif")
-    let width = Math.max(labelWidth, detailsWidth, (columnWidth - cellPadding))
-    width += cellPadding + cellBorder
+    let width = Math.max(labelWidth, detailsWidth, (columnWidth - cellPadding - cellBorder))
     
-    return { label, dataType, details, width }
+    return { id, label, dataType, details, width }
   })
 
   return columns
@@ -186,6 +185,7 @@ const ColumnHeaders = forwardRef(({
   columnWidth,
   width,
   headers,
+  editAction,
   canEdit=true
 }, ref) => {
 
@@ -196,12 +196,22 @@ const ColumnHeaders = forwardRef(({
     const inputEl = useRef()
     
     const handleClick = () => {
-      console.log(inputEl.current.getBoundingClientRect())
       if (canEdit) setIsEditing(true)
     }
 
-    const handleBlur = () => {
+    const handleCancel = () => {
+      setHeader(label)
       setIsEditing(false)
+    }
+
+    const handleKeyDown = e => {
+      if (e.key === "Enter") {
+        editAction(columnIndex, header)
+        setIsEditing(false)
+      }
+      if (e.key === "Escape") {
+        handleCancel()
+      }
     }
     
     const handleChange = e => {
@@ -225,7 +235,8 @@ const ColumnHeaders = forwardRef(({
           value={ header }
           disabled={ !isEditing }
           onChange={ handleChange }
-          onBlur={ handleBlur }
+          onBlur={ handleCancel }
+          onKeyDown={ handleKeyDown }
         />
         <HeaderDetails>{ details }</HeaderDetails>
       </TableCell>
@@ -235,7 +246,7 @@ const ColumnHeaders = forwardRef(({
         className="table-header"
       />
     )
-  }, [ headers, canEdit ])
+  }, [ headers, canEdit, editAction ])
   
   return (
     <Grid
@@ -260,16 +271,16 @@ const ColumnHeaders = forwardRef(({
 const Table = ({
   schema={},
   items=[],
-  parentNode
+  parentNode,
+  editHeader
 }) => {
   const columns = useMemo(() => getColumns(schema), [schema])
   const columnWidths = useMemo(() => {
     let widths = columns.map(col => {
-      let { label, dataType, width } = col
-      
+      let { id, dataType, width } = col
       if (!["boolean", "number"].includes(dataType)) {
         items.forEach(row => {
-          const cellWidth = getTextWidth(row[label], "normal 16px sans-serif")
+          const cellWidth = getTextWidth(row[id], "normal 16px sans-serif")
           width = Math.max(cellWidth, width)
         })
       }
@@ -279,6 +290,7 @@ const Table = ({
 
     widths = addEmptyColumns(widths, parentNode)
     widths[widths.length - 1] -= cellBorder
+
     return widths
   }, [items, columns, parentNode])
 
@@ -298,8 +310,8 @@ const Table = ({
   }, [ parentNode ])
 
   const Cell = useCallback(({ columnIndex, rowIndex, style }) => {
-    const {label, dataType} = columns[columnIndex] || {}
-    const item = (items[rowIndex] || {})[label]
+    const {id, dataType} = columns[columnIndex] || {}
+    const item = (items[rowIndex] || {})[id]
     const isLastofRow = columnIndex + 1 === columnWidths.length
 
     return (
@@ -329,6 +341,7 @@ const Table = ({
         columnWidth={ index => columnWidths[index] }
         width={ tableSize.width }
         headers={ columns }
+        editAction={ editHeader }
       />
       <Grid
         onScroll={ handleScroll }
