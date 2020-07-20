@@ -1,6 +1,12 @@
-import React, { useCallback, useMemo, forwardRef, useRef } from 'react'
+import React, { useCallback, useMemo, forwardRef, useRef, useState, useEffect } from 'react'
 import styled from 'styled-components'
 import { VariableSizeGrid as Grid } from "react-window";
+
+const headerHeight = 65
+const rowHeight = 52
+const columnWidth = 150
+const cellPadding = 40
+const cellBorder = 2
 
 const HeaderDetails = styled.div`
   color: #444;
@@ -32,10 +38,14 @@ const Ex = styled.span`
 `
 
 const TableCell = styled.div`
-  border-top: none;
+  border-right: 2px solid white;
   font-family: sans-serif;
   padding: 16px 20px;
-  
+
+  &.row-end {
+    border-right: none;
+  }
+
   &.data-number {
     text-align: right;
   }
@@ -45,13 +55,15 @@ const TableCell = styled.div`
     font-weight: bold;
     grid-row: 1;
     z-index: 1;
+
+    &:last-of-type {
+      border-right: none;
+    }
   }
 
   &.table-row {
     background: #ebebeb;
     border-top: none;
-    min-height: 52px;
-    min-width: 150px;
 
     &.row-odd {
       background: #fafafa;
@@ -69,6 +81,22 @@ const TableCell = styled.div`
       }
     }
   }
+
+  input {
+    background: inherit;
+    border: 1px solid transparent;
+    font: inherit;
+    margin: 0;
+    padding: 0;
+    text-align: inherit;
+    width: 100%;
+
+    &:focus {
+      background: white;
+      border-color: #444;
+      outline: none;
+    }
+  }
 `
 
 // measure the width of text using a canvas
@@ -82,227 +110,227 @@ const getTextWidth = (text, font="normal 16px sans-serif") => {
   const context = getTextWidth.canvas.getContext("2d")
   context.font = font
   const metrics = context.measureText(text)
-  return metrics.width
+  return Math.ceil(metrics.width)
 }
 
-const getCellClass = (isHeader, dataType, rowIndex) => {
-  const classNames = [`data-${dataType}`]
-  classNames.push(isHeader ? "table-header" : "table-row")
-  if (!isHeader && rowIndex % 2 === 1) classNames.push("row-odd")
-  return classNames.join(" ")
+const getCellClass = (dataType, rowIndex, isLastofRow) => {
+  const isOdd = rowIndex % 2 === 1
+  const dataClass = `data-${dataType}`
+  const rowClass = isOdd ? "row-odd" : "row-even"
+  const rowEnd = isLastofRow ? "row-end" : ""
+  return `table-row ${dataClass} ${rowClass} ${rowEnd}`
 }
 
-const TableScroll = forwardRef(({
-  onScroll,
-  height,
+const countEmpty = (tableSize, contentSize, fillSize) => {
+  const diff = tableSize - contentSize
+  return diff < 1 ? 0 : Math.ceil(diff / fillSize)
+}
+
+const addEmptyRows = (items, parent) => {
+  const { offsetHeight: height } = parent
+  const contentHeight = (items.length * rowHeight) + headerHeight
+
+  const emptyRows = countEmpty(height - 15, contentHeight, rowHeight)
+  if (emptyRows === 0) return items
+
+  return [
+    ...items,
+    ...Array(emptyRows).fill({})
+  ]
+}
+
+const addEmptyColumns = (columns=[], parent) => {
+  const { offsetWidth: width } = parent
+  const contentWidth = columns.reduce((t, w) => t + w, 0)
+
+  const emptyCols = countEmpty(width - 15, contentWidth, columnWidth)
+  if (emptyCols === 0) return columns
+
+  return [
+    ...columns,
+    ...Array(emptyCols).fill(columnWidth)
+  ]
+}
+
+const getColumns = schema => {
+  const labels = Object.keys(schema.properties || {})
+  const columns = labels.map(key => {
+    const label = key
+    const dataType = schema.properties[key].type
+    const details = `type: ${schema.properties[key].type}${schema.required.includes(key) ? "" : " (optional)"}`
+
+    const labelWidth = getTextWidth(label, "bold 16px sans-serif")
+    const detailsWidth = getTextWidth(details, "normal 10px sans-serif")
+    let width = Math.max(labelWidth, detailsWidth, (columnWidth - cellPadding))
+    width += cellPadding + cellBorder
+    
+    return { label, dataType, details, width }
+  })
+
+  return columns
+}
+
+const ColumnHeaders = forwardRef(({
+  columnCount,
+  columnWidth,
   width,
-  scrollWidth,
-  scrollHeight
-}, ref) => (
-  <Grid
-    ref={ ref }
-    onScroll={ onScroll }
-    columnCount={ 1 }
-    columnWidth={ () => scrollWidth }
-    height={ height }
-    rowCount={ 1 }
-    rowHeight={ () => scrollHeight }
-    width={ width }
-    style={{
-      right: 0,
-      bottom: 0,
-      position: "absolute",
-      zIndex: 2
-    }}
-  >
-    { () => <div /> }
-  </Grid>
-))
+  headers,
+  canEdit=true
+}, ref) => {
+
+  const HeaderCell = useCallback(({ columnIndex, style }) => {
+    const { label, dataType, details } = headers[columnIndex] || {}
+    const [ isEditing, setIsEditing ] = useState(false)
+    const [ header, setHeader ] = useState(label)
+    const inputEl = useRef()
+    
+    const handleClick = () => {
+      console.log(inputEl.current.getBoundingClientRect())
+      if (canEdit) setIsEditing(true)
+    }
+
+    const handleBlur = () => {
+      setIsEditing(false)
+    }
+    
+    const handleChange = e => {
+      if (!canEdit) return null
+      const { value } = e.target
+      setHeader(value)
+    }
+
+    useEffect(() => {
+      if (isEditing) inputEl.current.select()
+    }, [isEditing])
+    
+    return (
+      <TableCell
+        className={ `data-${dataType} table-header` }
+        style={ style }
+        onClick={ handleClick }
+      >
+        <input
+          ref={ inputEl }
+          value={ header }
+          disabled={ !isEditing }
+          onChange={ handleChange }
+          onBlur={ handleBlur }
+        />
+        <HeaderDetails>{ details }</HeaderDetails>
+      </TableCell>
+    )
+  }, [ headers, canEdit ])
+  
+  return (
+    <Grid
+      ref={ ref }
+      height={ headerHeight }
+      rowCount={ 1 }
+      rowHeight={ () => headerHeight }
+      style={{
+        boxShadow: "0 2px 3px #aaa8",
+        overflowX: "hidden",
+        overflowY: "scroll",
+        position: "absolute",
+        zIndex: 2
+      }}
+      {...{columnCount, columnWidth, width}}
+    >
+      { HeaderCell }
+    </Grid>
+  )
+})
 
 const Table = ({
   schema={},
   items=[],
-  minItems=10,
   parentNode
 }) => {
-  const tableRows = useMemo(() => {
-    if (items.length > minItems) return items
-    return [
-      ...items,
-      ...Array(minItems - items.length).fill({
+  const [tableRows, setTableRows] = useState(items)
+  const columns = useMemo(() => getColumns(schema), [schema])
 
-      })
-    ]
-  }, [items, minItems])
-  
-  const columns = useMemo(() => Object.keys(schema.properties || {}).map(key => ({
-    label: key,
-    dataType: schema.properties[key].type,
-    details: `type: ${schema.properties[key].type}${schema.required.includes(key) ? "" : " (optional)"}`
-  })), [schema])
+  useEffect(() => {
+    setTableRows(addEmptyRows(items, parentNode))
+  }, [items, parentNode])
 
   const columnWidths = useMemo(() => {
-    const widths = Array(columns.length).fill(150)
-    const cellPadding = 40
-    columns.forEach((col, index) => {
-      const {label, dataType, details} = col
-
-      const labelWidth = getTextWidth(label, "bold 16px sans-serif")
-      const detailsWidth = getTextWidth(details, "normal 10px sans-serif")
-      let width = Math.max(labelWidth, detailsWidth)
+    let widths = columns.map(col => {
+      let { label, dataType, width } = col
       
       if (!["boolean", "number"].includes(dataType)) {
         tableRows.forEach(row => {
           const cellWidth = getTextWidth(row[label], "normal 16px sans-serif")
-          if (cellWidth > width) {
-            width = Math.ceil(cellWidth)
-          }
+          width = Math.max(cellWidth, width)
         })
       }
 
-      if (width + cellPadding > widths[index]) {
-        widths[index] = Math.ceil(width + cellPadding)
-      }
+      return width + cellPadding + cellBorder
     })
-    return widths
-  }, [tableRows, columns])
 
-  const rowHeights = useMemo(() => (
-    [65, ...Array(tableRows.length).fill(52)]
-  ), [tableRows])
+    widths = addEmptyColumns(widths, parentNode)
+    widths[widths.length - 1] -= cellBorder
+    return widths
+  }, [tableRows, columns, parentNode])
 
   const tableSize = useMemo(() => {
-    const contentWidth = (columnWidths || [0]).reduce((w, c) => w + c, 0)
-    const contentHeight = (rowHeights || [0]).reduce((h, r) => h + r, 0)
     const { offsetWidth, offsetHeight } = parentNode
 
-    const tableWidth = contentWidth < offsetWidth ? contentWidth : offsetWidth
-    const tableHeight = contentHeight < offsetHeight ? contentHeight : offsetHeight
-
-    const scrollX = (contentWidth - tableWidth) > 0 ? (contentWidth - tableWidth) + 15 : 0
-    const scrollY = (contentHeight - tableHeight) > 0 ? (contentHeight - tableHeight) + 15 : 0
-
     return {
-      width: tableWidth,
-      height: tableHeight,
-      scroll: {
-        x: scrollX,
-        y: scrollY
-      }
+      width: offsetWidth,
+      height: offsetHeight
     }
-  }, [columnWidths, parentNode, rowHeights])
+  }, [ parentNode ])
 
   const Cell = useCallback(({ columnIndex, rowIndex, style }) => {
-    const {label, dataType, details} = columns[columnIndex]
-    const isHeader = !rowIndex
-    const item = isHeader
-      ? label
-      : (tableRows[rowIndex - 1] || {})[label]
+    const {label, dataType} = columns[columnIndex] || {}
+    const item = (tableRows[rowIndex] || {})[label]
+    const isLastofRow = columnIndex + 1 === columnWidths.length
 
     return (
       <TableCell
-        className={getCellClass(isHeader, dataType, rowIndex)}
+        className={getCellClass(dataType, rowIndex, isLastofRow)}
         style={ style }
       >
         { dataType === "boolean" && typeof item === "boolean" ? item ? <Check /> : <Ex /> : "" }
         { typeof item === "string" ? item : JSON.stringify(item) }
-        { isHeader ? <HeaderDetails>{ details }</HeaderDetails> : "" }
       </TableCell>
     )
-  }, [tableRows, columns])
+  }, [tableRows, columns, columnWidths.length])
 
   const HeaderContainer = useRef()
-  const ContentContainer = useRef()
-  const ScrollContainerX = useRef()
-  const ScrollContainerY = useRef()
 
-  const handleScrollX = ({ scrollLeft }) => {
-    HeaderContainer.current.scrollTo({ scrollLeft })
-    ContentContainer.current.scrollTo({ scrollLeft })
-  }
-  
-  const handleScrollY = ({ scrollTop }) => {
-    ContentContainer.current.scrollTo({ scrollTop })
-  }
-
-  const scrollAll = useCallback(({ x, y }) => {
-    const { scrollLeft: l, scrollTop: t } = ContentContainer.current.state
-    const { x: sx, y: sy } = tableSize.scroll
-    const scrollLeft = sx < l + x ? sx : l + x
-    const scrollTop = sy < t + y ? sy : t + y
-
-    HeaderContainer.current.scrollTo({ scrollLeft })
-    ContentContainer.current.scrollTo({ scrollLeft, scrollTop })
-    if (ScrollContainerX.current) ScrollContainerX.current.scrollTo({ scrollLeft })
-    if (ScrollContainerY.current) ScrollContainerY.current.scrollTo({ scrollTop })
-  }, [tableSize.scroll])
-
-  const handleWheel = useCallback(({ deltaX: x, deltaY: y }) => {
-    const { scroll } = tableSize
-    if (scroll.x || scroll.y) {
-      scrollAll({ x, y })
+  const handleScroll = useCallback(({ scrollLeft, scrollUpdateWasRequested }) => {
+    if (!scrollUpdateWasRequested) {
+      HeaderContainer.current.scrollTo({ scrollLeft })
     }
-  }, [tableSize, scrollAll])
+  }, [])
 
   return (
-    <div
-      onWheel={ handleWheel }
-    >
-      <Grid
+    <div>
+      <ColumnHeaders
         ref={ HeaderContainer }
-        className="Grid grid-headers-container"
-        columnCount={(columnWidths || []).length}
-        columnWidth={index => columnWidths[index]}
-        height={rowHeights[0]}
-        rowCount={1}
-        rowHeight={index => rowHeights[index]}
-        width={tableSize.width}
-        style={{
-          boxShadow: "0 2px 3px #aaa8",
-          overflow: "hidden",
-          position: "absolute",
-          zIndex: 2
-        }}
-      >
-        {Cell}
-      </Grid>
+        columnCount={ (columnWidths || []).length }
+        columnWidth={ index => columnWidths[index] }
+        width={ tableSize.width }
+        headers={ columns }
+      />
       <Grid
-        ref={ ContentContainer }
+        onScroll={ handleScroll }
         className="Grid"
         columnCount={(columnWidths || []).length}
         columnWidth={index => columnWidths[index]}
-        height={tableSize.height - (tableSize.scroll.x ? 15 : 0)}
-        rowCount={(rowHeights || []).length}
-        rowHeight={index => rowHeights[index]}
+        height={tableSize.height - headerHeight}
+        rowCount={(tableRows || []).length}
+        rowHeight={() => rowHeight}
         width={tableSize.width}
         style={{
-          overflow: "hidden",
           position: "absolute",
+          top: headerHeight,
           zIndex: 1
         }}
       >
         {Cell}
       </Grid>
-      { tableSize.scroll.x ? (
-        <TableScroll
-          ref={ ScrollContainerX }
-          onScroll={ handleScrollX }
-          height={ 15 }
-          width={ tableSize.width }
-          scrollWidth={ (columnWidths || [0]).reduce((w, c) => w + c, 0) }
-          scrollHeight={ (rowHeights || [0]).reduce((h, r) => h + r, 0) }
-        />
-      ) : "" }
-      { tableSize.scroll.y ? (
-        <TableScroll
-          ref={ ScrollContainerY }
-          onScroll={ handleScrollY }
-          height={ tableSize.height }
-          width={ 15 }
-          scrollWidth={ (columnWidths || [0]).reduce((w, c) => w + c, 0) }
-          scrollHeight={ (rowHeights || [0]).reduce((h, r) => h + r, 0) }
-        />
-      ) : "" }
     </div>
   )
 }

@@ -46,7 +46,6 @@ const TableWrap = styled.div`
 `
 
 const DescriptionContainer = styled.div`
-  width: 100%;
   max-width: 800px;
   margin-left: 25px;
   white-space: nowrap;
@@ -182,9 +181,6 @@ const DataShow = ({ location: { pathname }}) => {
     axios.get(`http://localhost:4000/data/${pathname.slice(1)}`)
       .then(res => {
         const {items, dataStructure} = res.data
-        if (items.length < 10) {
-          items.push(...Array(10 - items.length).fill(""))
-        }
         setDataStructure(dataStructure)
         setItems(items)
         const end = performance.now()
@@ -258,7 +254,6 @@ const DataShow = ({ location: { pathname }}) => {
             parentNode={ tableContainer.current }
             schema={ schema }
             items={ items }
-            minItems={ 10 }
           />
         ) : "" }
       </TableWrap>
