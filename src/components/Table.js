@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, forwardRef, useRef, useState, useEffect } 
 import styled from 'styled-components'
 import { VariableSizeGrid as Grid } from 'react-window'
 
+import Form from '../components/CustomForm'
 import { Input } from './InputContainer'
 
 const headerHeight = 65
@@ -9,6 +10,12 @@ const rowHeight = 52
 const columnWidth = 150
 const cellPadding = 40
 const cellBorder = 2
+
+
+////////////////////////////////////////
+//////                            //////
+//////      Component Styles      //////
+//////                            //////
 
 const HeaderDetails = styled.div`
   color: #444;
@@ -44,6 +51,11 @@ const TableCell = styled.div`
   color: black;
   font-family: sans-serif;
   padding: 16px 20px;
+  position: relative;
+
+  *.blur-cells & {
+    filter: blur(2px);
+  }
 
   &.row-end {
     border-right: none;
@@ -84,29 +96,76 @@ const TableCell = styled.div`
       }
     }
   }
+`
 
-  input {
-    background: inherit;
-    border-color: transparent;
-    color: inherit;
-    font: inherit;
-    height: unset;
-    margin: 0;
-    max-width: unset;
-    padding: 0;
-    text-align: inherit;
-    width: 100%;
+const HeaderActionsButton = styled.button`
+  position: absolute;
+  top: 5px;
+  right: 0;
+  
+  background: white;
+  border: none;
+  border-radius: 4px;
+  color: #444;
+  font-weight: bold;
+  font-size: 16px;
+  height: 26px;
+  opacity: 0.2;
+  padding: 0;
+  text-align: center;
+  width: 20px;
 
-    &[disabled] {
-      border-color: transparent;
-      color: inherit;
-    }
+  *:hover > &, &:focus {
+    opacity: 1;
+  }
 
-    &:focus {
-      background: white;
-      border-color: #2684ff;
-      /* outline: none; */
-    }
+  &:hover {
+    background: #f4f4f4;
+  }
+
+  &:active {
+    background: #ddd;
+  }
+`
+
+//////                            //////
+//////      Component Styles      //////
+//////                            //////
+////////////////////////////////////////
+
+
+const HeaderActionsMenu = styled.ul.attrs(p => ({
+  style: {
+    left: p.right - 120 || 0,
+    display: p.isOpen ? "block" : "none"
+  }
+}))`
+  background: white;
+  border-radius: 1px;
+  box-shadow: 0 2px 6px 2px #3c404326;
+  list-style: none;
+  margin: 0;
+  padding: 5px 0;
+  position: absolute;
+  top: 5px;
+  width: 120px;
+  z-index: 2;
+`
+
+const ActionMenuItem = styled.button.attrs(() => ({
+  onMouseOver: e => e.target.focus()
+}))`
+  background: white;
+  border: none;
+  display: block;
+  line-height: 30px;
+  padding: 0 10px;
+  text-align: left;
+  width: 100%;
+
+  &:focus {
+    background: #0092ff44;
+    outline: none;
   }
 `
 
@@ -163,12 +222,13 @@ const addEmptyColumns = (columns=[], parent) => {
   ]
 }
 
+const getDetails = (type, required) => `type: ${type}${required ? "" : " (optional)"}`
+
 const getColumns = schema => {
   const columnIds = Object.keys(schema.properties || {})
   const columns = columnIds.map(id => {
-    const label = schema.properties[id].title
-    const dataType = schema.properties[id].type
-    const details = `type: ${schema.properties[id].type}${schema.required.includes(id) ? "" : " (optional)"}`
+    const { title: label, type: dataType } = schema.properties[id]
+    const details = getDetails(dataType, schema.required.includes(id))
 
     const labelWidth = getTextWidth(label, "bold 16px sans-serif")
     const detailsWidth = getTextWidth(details, "normal 10px sans-serif")
@@ -185,60 +245,43 @@ const ColumnHeaders = forwardRef(({
   columnWidth,
   width,
   headers,
-  editAction,
-  canEdit=true
+  permissions,
+  editHeaderAction
 }, ref) => {
+  const [ menuState, setMenuState ] = useState({})
+  const menuContainer = useRef()
+
+  useEffect(() => {
+    if (menuState.isOpen) {
+      menuContainer.current.firstChild.firstChild.focus()
+    }
+  }, [ menuState ])
 
   const HeaderCell = useCallback(({ columnIndex, style }) => {
     const { label, dataType, details } = headers[columnIndex] || {}
-    const [ isEditing, setIsEditing ] = useState(false)
-    const [ header, setHeader ] = useState(label)
-    const inputEl = useRef()
-    
-    const handleClick = () => {
-      if (canEdit) setIsEditing(true)
+    const cellEl = useRef()
+
+    const handleActionsClick = () => {
+      const { scrollLeft } = ref.current.state
+      const { offsetLeft, offsetWidth } = cellEl.current
+      const offsetRight = offsetLeft - scrollLeft + offsetWidth
+      
+      setMenuState({
+        isOpen: true,
+        index: columnIndex,
+        right: offsetRight
+      })
     }
 
-    const handleCancel = () => {
-      setHeader(label)
-      setIsEditing(false)
-    }
-
-    const handleKeyDown = e => {
-      if (e.key === "Enter") {
-        editAction(columnIndex, header)
-        setIsEditing(false)
-      }
-      if (e.key === "Escape") {
-        handleCancel()
-      }
-    }
-    
-    const handleChange = e => {
-      if (!canEdit) return null
-      const { value } = e.target
-      setHeader(value)
-    }
-
-    useEffect(() => {
-      if (isEditing) inputEl.current.select()
-    }, [isEditing])
-    
     return label ? (
       <TableCell
+        ref={ cellEl }
         className={ `data-${dataType} table-header` }
         style={ style }
-        onClick={ handleClick }
       >
-        <Input
-          ref={ inputEl }
-          value={ header }
-          disabled={ !isEditing }
-          onChange={ handleChange }
-          onBlur={ handleCancel }
-          onKeyDown={ handleKeyDown }
-        />
+        { label }
         <HeaderDetails>{ details }</HeaderDetails>
+        <HeaderActionsButton onClick={ handleActionsClick }>︙</HeaderActionsButton>
       </TableCell>
     ) : (
       <TableCell
@@ -246,25 +289,95 @@ const ColumnHeaders = forwardRef(({
         className="table-header"
       />
     )
-  }, [ headers, canEdit, editAction ])
+  }, [ headers, ref ])
+
+  const closeMenu = () => {
+    setMenuState({ isOpen: false })
+  }
+
+  const handleMenuBlur = e => {
+    if (!e.relatedTarget) closeMenu()
+  }
+
+  const handleMenuKeyDown = e => {
+    if (e.key === "Escape") closeMenu()
+    
+    if (!["Tab", "ArrowDown", "ArrowUp"].includes(e.key)) return
+
+    const children = Array.from(e.currentTarget.children)
+      .map(ch => ch.firstChild)
+      .filter(ch => !ch.attributes.disabled)
+    const first = children[0]
+    const last = children[children.length - 1]
+    
+    // trap focus inside menu while menu is open
+    if (e.key === "Tab") {
+      if (e.target === first && e.shiftKey) {
+        e.preventDefault()
+        last.focus()
+      }
+      if (e.target === last && !e.shiftKey) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
+    // allow arrow keys to navigate menu
+    if (e.key === "ArrowDown") {
+      if (e.target === last) {
+        first.focus()
+      } else {
+        children[children.indexOf(e.target) + 1].focus()
+      }
+    }
+    if (e.key === "ArrowUp") {
+      if (e.target === first) {
+        last.focus()
+      } else {
+        children[children.indexOf(e.target) - 1].focus()
+      }
+    }
+  }
+
+  const handleNameClick = () => {
+    closeMenu()
+    editHeaderAction(headers[menuState.index], "title")
+  }
   
+  const handleTypeClick = () => {
+    closeMenu()
+    editHeaderAction(headers[menuState.index], "type")
+  }
+
   return (
-    <Grid
-      ref={ ref }
-      height={ headerHeight }
-      rowCount={ 1 }
-      rowHeight={ () => headerHeight }
-      style={{
-        boxShadow: "0 2px 3px #aaa8",
-        overflowX: "hidden",
-        overflowY: "scroll",
-        position: "absolute",
-        zIndex: 2
-      }}
-      {...{columnCount, columnWidth, width}}
-    >
-      { HeaderCell }
-    </Grid>
+    <>
+      <Grid
+        ref={ ref }
+        height={ headerHeight }
+        rowCount={ 1 }
+        rowHeight={ () => headerHeight }
+        style={{
+          boxShadow: "0 2px 3px #aaa8",
+          overflowX: "hidden",
+          overflowY: "scroll",
+          position: "absolute",
+          zIndex: 2
+        }}
+        {...{columnCount, columnWidth, width}}
+      >
+        { HeaderCell }
+      </Grid>
+      <HeaderActionsMenu
+        {...menuState}
+        ref={ menuContainer }
+        onKeyDown={ handleMenuKeyDown }
+        onBlur={ handleMenuBlur }
+      >
+        <li><ActionMenuItem disabled={ !permissions.title } onClick={ handleNameClick }>Edit Name</ActionMenuItem></li>
+        <li><ActionMenuItem disabled={ !permissions.type } onClick={ handleTypeClick }>Edit Type</ActionMenuItem></li>
+        <li><ActionMenuItem disabled={ !permissions.delete }>Delete</ActionMenuItem></li>
+      </HeaderActionsMenu>
+    </>
   )
 })
 
@@ -272,7 +385,8 @@ const Table = ({
   schema={},
   items=[],
   parentNode,
-  editHeader
+  permissions,
+  editHeaderAction
 }) => {
   const columns = useMemo(() => getColumns(schema), [schema])
   const columnWidths = useMemo(() => {
@@ -341,7 +455,8 @@ const Table = ({
         columnWidth={ index => columnWidths[index] }
         width={ tableSize.width }
         headers={ columns }
-        editAction={ editHeader }
+        permissions={ permissions }
+        editHeaderAction={ editHeaderAction }
       />
       <Grid
         onScroll={ handleScroll }

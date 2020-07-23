@@ -5,6 +5,29 @@ import { v4 as uuid } from 'uuid'
 
 import Form from '../components/CustomForm'
 
+const fieldItemSchema = {
+  type: "object",
+  required: ["name", "type"],
+  properties: {
+    name: {
+      title: "Field Name",
+      type: "string"
+    },
+    type: {
+      title: "Field Type",
+      type: "string",
+      default: "string",
+      enum: ["string", "number", "boolean"],
+      enumNames: ["Text", "Number", "True/False"]
+    },
+    required: {
+      title: "This field is required",
+      default: true,
+      type: "boolean"
+    }
+  }
+}
+
 const formSchema = {
   title: "Create New Data Structure",
   type: "object",
@@ -33,28 +56,7 @@ const formSchema = {
       title: "Fields",
       type: "array",
       minItems: 1,
-      items: {
-        type: "object",
-        required: ["name", "type"],
-        properties: {
-          name: {
-            title: "Field Name",
-            type: "string"
-          },
-          type: {
-            title: "Field Type",
-            type: "string",
-            default: "string",
-            enum: ["string", "number", "boolean"],
-            enumNames: ["Text", "Number", "True/False"]
-          },
-          required: {
-            title: "This field is required",
-            default: true,
-            type: "boolean"
-          }
-        }
-      }
+      items: fieldItemSchema
     }
   }
 }

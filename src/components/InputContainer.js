@@ -110,7 +110,7 @@ const StyledSelect = styled(Select).attrs(() => ({
     border-radius: 1px;
     font-size: 16px;
     height: 30px;
-    max-width: 200px;
+    /* max-width: 200px; */
     min-height: 30px;
 
     &:hover {

@@ -4,7 +4,7 @@ import axios from 'axios'
 
 import Table from '../components/Table'
 import Form from '../components/CustomForm'
-import Button, { AddField } from '../components/Button'
+import Button from '../components/Button'
 
 import useModal from '../customHooks/useModal'
 
@@ -173,11 +173,79 @@ const EditDetailsForm = ({ pathname, onSubmit, closeModal, details }) => {
   )
 }
 
+const EditHeaderForm = ({ pathname, onSubmit, closeModal, header, editType }) => {
+  const { id, label: title, dataType: type } = header
+  const [ newHeader, setNewHeader ] = useState({ title, type })
+  const formEl = useRef()
+
+  useEffect(() => {
+    formEl.current.formElement[0].focus()
+  }, [ header ])
+  
+  const handleSubmit = () => {
+    axios.post(`http://localhost:4000/data/${pathname.slice(1)}/update`, {
+      type: "schema",
+      schema: {
+        [id]: newHeader
+      }
+    }).then(() => {
+      onSubmit({ ...newHeader, id })
+    }).catch(err => {
+      console.error(err)
+    })
+  }
+
+  const handleChange = ({formData}) => {
+    setNewHeader({
+      ...newHeader,
+      [editType]: formData
+    })
+  }
+
+  const nameSchema = {
+    title: "Field Name",
+    type: "string"
+  }
+
+  const typeSchema = {
+    title: "Field Type",
+    type: "string",
+    enum: ["string", "number", "boolean"],
+    enumNames: ["Text", "Number", "True/False"]
+  }
+
+  const schema = {
+    title: nameSchema,
+    type: typeSchema
+  }
+
+  return (
+    <StyledForm
+      formData={ newHeader[editType] }
+      schema={ schema[editType] }
+      onSubmit={ handleSubmit }
+      onChange={ handleChange }
+      ref={ formEl }
+    >
+      <FormToolbar>
+        <Button buttonType="fill" type="submit">Submit</Button>
+        <Button buttonType="text" onClick={ closeModal }>Cancel</Button>
+      </FormToolbar>
+    </StyledForm>
+  )
+}
+
 const DataShow = ({ location: { pathname }}) => {
   const [{details, schema}, setDataStructure] = useState({})
   const [items, setItems] = useState()
   const modalActions = useModal()[1]
   const tableContainer = useRef()
+
+  const permissions = useMemo(() => ({
+    title: true,
+    type: !(items || []).length,
+    delete: !(items || []).length
+  }), [items])
   
   useEffect(() => {
     axios.get(`http://localhost:4000/data/${pathname.slice(1)}`)
@@ -195,15 +263,15 @@ const DataShow = ({ location: { pathname }}) => {
   }, [ items, setItems, modalActions ])
 
   const addItemAction = () => {
-    modalActions.setContent((
+    const content = (
       <AddItemForm
         closeModal={() => modalActions.close()}
         schema={schema}
         onSubmit={itemSubmit}
         {...{pathname}}
       />
-    ))
-    modalActions.open()
+    )
+    modalActions.open(content)
   }
 
   const detailsSubmit = useCallback((newDetails) => {
@@ -215,43 +283,46 @@ const DataShow = ({ location: { pathname }}) => {
   }, [details, schema, modalActions])
   
   const editDetailsAction = () => {
-    modalActions.setContent((
+    const content = (
       <EditDetailsForm
         closeModal={() => modalActions.close()}
         onSubmit={detailsSubmit}
         {...{pathname, details}}
       />
-    ))
-    modalActions.open()
+    )
+    modalActions.open(content)
   }
 
-  const editHeaderAction = useCallback((columnIndex, newHeader) => {
-    const id = Object.keys(schema.properties)[columnIndex]
-    const properties = Object.keys(schema.properties).reduce((obj, key) => {
-      obj[key] = {...schema.properties[key]}
-      return obj
-    }, {})
-    properties[id].title = newHeader
-
-    const oldSchema = {...schema}
-    const newSchema = {
-      ...schema,
-      properties
-    }
-    
-    setDataStructure({ details, schema: newSchema })
-    axios.post(`http://localhost:4000/data/${pathname.slice(1)}/update`, {
-      type: "headers",
-      headers: {
-        [id]: {
-          title: newHeader
+  const headerSubmit = useCallback((newHeader) => {
+    const { id, title, type } = newHeader
+    modalActions.close()
+    const newDataStructure = {
+      details,
+      schema: {
+        ...schema,
+        properties: {
+          ...schema.properties,
+          [id]: {
+            ...schema.properties[id],
+            title,
+            type
+          }
         }
       }
-    }).catch(err => {
-        setDataStructure({ details, schema: oldSchema })
-        console.error(err)
-      })
-  }, [ schema, details, pathname ])
+    }
+    setDataStructure(newDataStructure)
+  }, [ details, modalActions, schema ])
+
+  const editHeaderAction = (header, editType) => {
+    const content = (
+      <EditHeaderForm
+        closeModal={() => modalActions.close()}
+        onSubmit={ headerSubmit }
+        {...{pathname, header, editType}}
+      />
+    )
+    modalActions.open(content)
+  }
 
   const ActionBar = ({ actions }) => (
     <ActionContainer>
@@ -282,7 +353,8 @@ const DataShow = ({ location: { pathname }}) => {
             parentNode={ tableContainer.current }
             schema={ schema }
             items={ items }
-            editHeader={ editHeaderAction }
+            permissions={ permissions }
+            editHeaderAction={ editHeaderAction }
           />
         ) : "" }
       </TableWrap>
