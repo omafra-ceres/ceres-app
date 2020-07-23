@@ -246,7 +246,8 @@ const ColumnHeaders = forwardRef(({
   width,
   headers,
   permissions,
-  editHeaderAction
+  editHeaderAction,
+  deleteHeaderAction
 }, ref) => {
   const [ menuState, setMenuState ] = useState({})
   const menuContainer = useRef()
@@ -349,6 +350,11 @@ const ColumnHeaders = forwardRef(({
     editHeaderAction(headers[menuState.index], "type")
   }
 
+  const handleDeleteClick = () => {
+    closeMenu()
+    deleteHeaderAction(headers[menuState.index].id)
+  }
+
   return (
     <>
       <Grid
@@ -375,7 +381,7 @@ const ColumnHeaders = forwardRef(({
       >
         <li><ActionMenuItem disabled={ !permissions.title } onClick={ handleNameClick }>Edit Name</ActionMenuItem></li>
         <li><ActionMenuItem disabled={ !permissions.type } onClick={ handleTypeClick }>Edit Type</ActionMenuItem></li>
-        <li><ActionMenuItem disabled={ !permissions.delete }>Delete</ActionMenuItem></li>
+        <li><ActionMenuItem disabled={ !permissions.delete } onClick={ handleDeleteClick }>Delete</ActionMenuItem></li>
       </HeaderActionsMenu>
     </>
   )
@@ -386,7 +392,8 @@ const Table = ({
   items=[],
   parentNode,
   permissions,
-  editHeaderAction
+  editHeaderAction,
+  deleteHeaderAction
 }) => {
   const columns = useMemo(() => getColumns(schema), [schema])
   const columnWidths = useMemo(() => {
@@ -457,6 +464,7 @@ const Table = ({
         headers={ columns }
         permissions={ permissions }
         editHeaderAction={ editHeaderAction }
+        deleteHeaderAction={ deleteHeaderAction }
       />
       <Grid
         onScroll={ handleScroll }

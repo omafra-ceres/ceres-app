@@ -72,6 +72,52 @@ const ActionContainer = styled.div`
   }
 `
 
+const DeleteText = styled.div`
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 25px;
+  width: 350px;
+  text-align: center;
+
+  h1 {
+    color: #444;
+    font-weight: bold;
+    margin-bottom: 20px;
+  }
+
+  p {
+    margin: 5px 0;
+  }
+`
+
+const DeleteForm = styled(StyledForm)`
+  margin: 0 auto;
+  max-width: 250px;
+  min-width: unset;
+
+  input {
+    margin-bottom: 5px;
+  }
+`
+
+const CancelDeleteButton = styled(Button).attrs({
+  buttonType: "fill"
+})`
+  border-color: #aaa;
+  background-color: #aaa;
+  color: white;
+`
+
+const DeleteButton = styled(Button).attrs({
+  buttonType: "fill",
+  type: "submit"
+})`
+  border-color: red;
+  background-color: red;
+  color: white;
+  margin-left: 20px;
+`
+
 //////                            //////
 //////      Component Styles      //////
 //////                            //////
@@ -235,6 +281,55 @@ const EditHeaderForm = ({ pathname, onSubmit, closeModal, header, editType }) =>
   )
 }
 
+const DeleteHeaderForm = ({closeModal, onSubmit, pathname, id, title}) => {
+  const [ titleCheck, setTitleCheck ] = useState()
+
+  useEffect(() => {
+    setTitleCheck()
+  }, [title])
+  
+  const handleChange = ({ formData }) => {
+    setTitleCheck(formData)
+  }
+
+  const validate = (formData, errors) => {
+    if (formData.delete !== title) {
+      errors.delete.addError("Field names do not match")
+    }
+    return errors
+  }
+
+  return (
+    <>
+      <DeleteText>
+        <h1>Are you sure?</h1>
+        <p>Deleting field <b>{ title }</b> cannot be undone.</p>
+        <p>Type the field name below to confirm.</p>
+      </DeleteText>
+      <DeleteForm
+        formData={ titleCheck }
+        schema={{
+          required: [ "delete" ],
+          properties: {
+            delete: {
+              title: "Field Name",
+              type: "string"
+            }
+          }
+        }}
+        validate={ validate }
+        onSubmit={ () => onSubmit(id) }
+        onChange={ handleChange }
+      >
+        <FormToolbar style={{ justifyContent: "center", marginTop: "20px" }}>
+          <CancelDeleteButton onClick={ closeModal }>Cancel</CancelDeleteButton>
+          <DeleteButton>Delete</DeleteButton>
+        </FormToolbar>
+      </DeleteForm>
+    </>
+  )
+}
+
 const DataShow = ({ location: { pathname }}) => {
   const [{details, schema}, setDataStructure] = useState({})
   const [items, setItems] = useState()
@@ -323,6 +418,42 @@ const DataShow = ({ location: { pathname }}) => {
     )
     modalActions.open(content)
   }
+  
+  const headerDelete = useCallback(id => {
+    modalActions.close()
+    if (items && items.length) return
+
+    axios.post(`http://localhost:4000/data/${pathname.slice(1)}/delete`, {
+      fields: [id]
+    }).then(() => {
+      const newProperties = Object.keys(schema.properties)
+        .filter(key => key !== id)
+        .reduce((acc, cur) => {
+          acc[cur] = {...schema.properties[cur]}
+          return acc
+        }, {})
+      const newDataStructure = {
+        details,
+        schema: {
+          ...schema,
+          properties: newProperties
+        }
+      }
+      setDataStructure(newDataStructure)
+    }).catch(console.error)
+  }, [ details, modalActions, schema, items, pathname ])
+
+  const deleteHeaderAction = id => {
+    const { title } = schema.properties[id]
+    const content = (
+      <DeleteHeaderForm
+        closeModal={() => modalActions.close()}
+        onSubmit={ headerDelete }
+        {...{pathname, id, title}}
+      />
+    )
+    modalActions.open(content)
+  }
 
   const ActionBar = ({ actions }) => (
     <ActionContainer>
@@ -355,6 +486,7 @@ const DataShow = ({ location: { pathname }}) => {
             items={ items }
             permissions={ permissions }
             editHeaderAction={ editHeaderAction }
+            deleteHeaderAction={ deleteHeaderAction }
           />
         ) : "" }
       </TableWrap>
