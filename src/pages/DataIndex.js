@@ -1,7 +1,9 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import styled from 'styled-components'
 import { Link } from 'react-router-dom'
+
+import { Select } from '../components/InputContainer'
 
 const CreateDataStructureLink = styled(Link)`
   background: ${ p => p.theme.blue };
@@ -80,6 +82,7 @@ const Page = styled.div`
 
   h1 {
     font-size: ${ p => p.theme.headerSize };
+    margin-bottom: 0;
   }
 
   ul {
@@ -87,17 +90,60 @@ const Page = styled.div`
   }
 `
 
-const DataIndex = () => {
-  const [dataStructures, setDataStructures] = React.useState([])
+const ListHeader = styled.div`
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+`
 
-  React.useEffect(() => {
-    axios.get("http://localhost:4000/data/")
+const StatusSelect = styled(Select)`
+  align-self: flex-end;
+  width: 200px;
+`
+
+const PlaceholderLiContainer = styled.div`
+  &:not(:first-child) {
+    margin-top: 10px;
+  }
+
+  align-items: center;
+  background: #efefef;
+  display: flex;
+  height: 58px;
+  padding: 10px 20px;
+
+  div {
+    background: #ddd;
+    height: 18px;
+  }
+`
+
+const PlaceholderLi = () => (
+  <PlaceholderLiContainer>
+    <div style={{ width: 100 + Math.ceil(Math.random() * 300) }} />
+  </PlaceholderLiContainer>
+)
+
+const statuses = {
+  draft: { value: "draft", label: "Draft" },
+  published: { value: "published", label: "Published" },
+  archived: { value: "archived", label: "Archived" }
+}
+
+const statusStructures = {}
+
+const DataIndex = () => {
+  const [dataStructures, setDataStructures] = useState([])
+  const [status, setStatus] = useState("published")
+
+  useEffect(() => {
+    setDataStructures(statusStructures[status] || [])
+    axios.get(`http://localhost:4000/data/?status=${status}`)
       .then(res => {
-        console.log(res.data)
         setDataStructures(res.data)
       })
       .catch(console.error)
-  },[])
+  },[ status ])
 
   const handleDelete = (e, dataStructure) => {
     e.preventDefault()
@@ -106,11 +152,28 @@ const DataIndex = () => {
       .catch(console.error)
   }
 
+  const handleStatusSelect = ({ value }) => {
+    statusStructures[status] = dataStructures
+    setStatus(value)
+  }
+
   return (
     <Page>
-      <h1>Datasets</h1>
+      <ListHeader>
+        <h1>Datasets</h1>
+        <StatusSelect
+          value={ statuses[status] }
+          isSearchable={ false }
+          onChange={ handleStatusSelect }
+          options={[
+            { value: "published", label: "Published" },
+            { value: "archived", label: "Archived" },
+            { value: "draft", label: "Drafts", isDisabled: true }
+          ]}
+        />
+      </ListHeader>
       <DataStructureListContainer>
-        { dataStructures.map(data => {
+        { dataStructures.length ? dataStructures.map(data => {
           const created = new Date(data.created_at).toLocaleDateString(undefined, {
             month: 'short', day: 'numeric', year: 'numeric'
           })
@@ -124,7 +187,7 @@ const DataIndex = () => {
               </Link>
             </DataStructureListItem>
           )
-        })}
+        }) : Array(5).fill(<PlaceholderLi />) }
       </DataStructureListContainer>
       <CreateDataStructureLink to="/create">Create Data Structure</CreateDataStructureLink>
     </Page>

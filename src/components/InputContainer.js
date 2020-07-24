@@ -285,7 +285,7 @@ export {
   InputContainer as default,
   Label,
   Input,
-  Select,
+  StyledSelect as Select,
   Textarea,
   Checkbox,
   RequiredSpan,
