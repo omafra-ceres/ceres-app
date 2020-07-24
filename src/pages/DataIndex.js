@@ -36,10 +36,19 @@ const DataStructureListContainer = styled.ul`
   padding: 0;
 `
 
-const DataStructureListItem = styled.li`
-  &:not(:first-child) {
-    margin-top: 10px;
+const ListColumns = styled.li`
+  display: grid;
+  font-weight: bold;
+  grid-template-columns: auto 300px 150px 100px;
+  padding: 5px 20px 10px;
+
+  > *:last-child {
+    justify-self: center;
   }
+`
+
+const DataStructureListItem = styled.li`
+  margin-top: 10px;
 
   a {
     align-items: center;
@@ -51,6 +60,10 @@ const DataStructureListItem = styled.li`
     padding: 10px 20px;
     position: relative;
     text-decoration: none;
+
+    *:last-child {
+      justify-self: center;
+    }
 
     &::after {
       box-shadow: 0 5px 5px -3px #0008;
@@ -66,7 +79,7 @@ const DataStructureListItem = styled.li`
     }
   }
 
-  &:hover a{
+  &:hover a {
     border-color: #666;
     
     &::after {
@@ -91,9 +104,12 @@ const Page = styled.div`
 `
 
 const ListHeader = styled.div`
+  border-bottom: 1px solid #ddd;
+  box-shadow: 0 2px 2px -1px #ddd;
   display: flex;
   flex-direction: row;
   justify-content: space-between;
+  padding-bottom: 20px;
 `
 
 const StatusSelect = styled(Select)`
@@ -173,6 +189,12 @@ const DataIndex = () => {
         />
       </ListHeader>
       <DataStructureListContainer>
+        <ListColumns>
+          <div>Name</div>
+          <div>Published</div>
+          <div>Status</div>
+          <div>Actions</div>
+        </ListColumns>
         { dataStructures.length ? dataStructures.map(data => {
           const created = new Date(data.created_at).toLocaleDateString(undefined, {
             month: 'short', day: 'numeric', year: 'numeric'

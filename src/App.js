@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Route, Switch } from 'react-router-dom'
 import styled, { ThemeProvider, css } from 'styled-components'
 
 import DataIndex from './pages/DataIndex'
-import DataStructureCreate from './pages/DataStructureCreate'
+import DataCreate from './pages/DataCreate'
 import DataShow from './pages/DataShow'
 import Header from './components/Header'
 
@@ -108,7 +108,7 @@ function App() {
           <Header />
           <Switch>
             <Route path="/" exact component={ DataIndex } />
-            <Route path="/create" component={ DataStructureCreate } />
+            <Route path="/create" component={ DataCreate } />
             <Route path="/:dataset" component={ DataShow } />
           </Switch>
         </Container>

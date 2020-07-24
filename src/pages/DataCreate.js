@@ -29,7 +29,7 @@ const fieldItemSchema = {
 }
 
 const formSchema = {
-  title: "Create New Data Structure",
+  title: "Create New Dataset",
   type: "object",
   properties: {
     details: {
@@ -105,7 +105,7 @@ const Button = styled.button`
   font-weight: bold;
   margin: 5px 0;
   min-width: 100px;
-  padding: 5px;
+  padding: 5px 20px;
   text-align: center;
 
   &:disabled {
@@ -138,8 +138,7 @@ const TextButton = styled(Button).attrs(() => ({
   border-color: #0000;
   background: none;
   box-shadow: none;
-  margin: 0 30px;
-  min-width: unset;
+  margin: 0 5px;
   padding: 5px;
 `
 
@@ -216,7 +215,7 @@ const nameToPath = name => (
     .replace(/[\s-_]+/g, "-")
 )
 
-const DataStructureCreate = () => {
+const DataCreate = () => {
   const [formData, setFormData] = React.useState(initialFormData)
 
   const handleSubmit = ({formData}) => {
@@ -244,7 +243,7 @@ const DataStructureCreate = () => {
         transformErrors={ transformErrors }
       >
         <FormActionsContainer>
-          <Submit>Submit</Submit>
+          <Submit>Publish</Submit>
           <TextButton>Cancel</TextButton>
         </FormActionsContainer>
       </Form>
@@ -252,4 +251,4 @@ const DataStructureCreate = () => {
   )
 }
 
-export default DataStructureCreate
+export default DataCreate
