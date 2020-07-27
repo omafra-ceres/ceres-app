@@ -128,12 +128,6 @@ const HeaderActionsButton = styled.button`
   }
 `
 
-//////                            //////
-//////      Component Styles      //////
-//////                            //////
-////////////////////////////////////////
-
-
 const HeaderActionsMenu = styled.ul.attrs(p => ({
   style: {
     left: p.right - 120 || 0,
@@ -168,6 +162,12 @@ const ActionMenuItem = styled.button.attrs(() => ({
     outline: none;
   }
 `
+
+//////                            //////
+//////      Component Styles      //////
+//////                            //////
+////////////////////////////////////////
+
 
 // measure the width of text using a canvas
 // without rendering anything to the DOM
