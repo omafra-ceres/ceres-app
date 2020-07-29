@@ -13,27 +13,22 @@ const setState = (newState) => {
   listeners.forEach(listener => listener(state))
 }
 
-const open = (content) => {
+const open = (content, data) => {
   document.body.classList.add("modal-open")
   setState({
-    ...state,
     isOpen: true,
+    data,
     ...modalContent[content] && { content: modalContent[content] }
   })
 }
 const close = () => {
   document.body.classList.remove("modal-open")
-  setState({ ...state, isOpen: false })
-}
-const toggle = () => {
-  document.body.classList.toggle("modal-open")
-  setState({ ...state, isOpen: !state.isOpen })
+  setState({ isOpen: false })
 }
 
 const actions = {
   open,
   close,
-  toggle,
   setState
 }
 

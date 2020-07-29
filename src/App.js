@@ -86,13 +86,14 @@ const Modal = ({modalState, modalActions}) => {
       modalActions.close()
     }
   }
+  const Content = modalState.content
   return (
     <ModalOverlay
       onClick={ handleOverlayClick }
       onKeyDown={ handleKeyDown }
     >
       <ModalContentContainer>
-        { modalState.content }
+        { Content ? <Content {...(modalState.data || {})} /> : "" }
       </ModalContentContainer>
     </ModalOverlay>
   )

@@ -333,7 +333,12 @@ const DeleteHeaderForm = ({closeModal, onSubmit, pathname, id, title}) => {
 const DataShow = ({ location: { pathname }}) => {
   const [{details, schema}, setDataStructure] = useState({})
   const [items, setItems] = useState()
-  const modalActions = useModal()[1]
+  const modalActions = useModal({
+    addItem: AddItemForm,
+    editDetails: EditDetailsForm,
+    editHeader: EditHeaderForm,
+    deleteHeader: DeleteHeaderForm
+  })[1]
   const tableContainer = useRef()
 
   const permissions = useMemo(() => ({
@@ -358,15 +363,13 @@ const DataShow = ({ location: { pathname }}) => {
   }, [ items, setItems, modalActions ])
 
   const addItemAction = () => {
-    const content = (
-      <AddItemForm
-        closeModal={() => modalActions.close()}
-        schema={schema}
-        onSubmit={itemSubmit}
-        {...{pathname}}
-      />
-    )
-    modalActions.open(content)
+    const data = {
+      closeModal: () => modalActions.close(),
+      onSubmit: itemSubmit,
+      schema,
+      pathname
+    }
+    modalActions.open("addItem", data)
   }
 
   const detailsSubmit = useCallback((newDetails) => {
@@ -378,14 +381,13 @@ const DataShow = ({ location: { pathname }}) => {
   }, [details, schema, modalActions])
   
   const editDetailsAction = () => {
-    const content = (
-      <EditDetailsForm
-        closeModal={() => modalActions.close()}
-        onSubmit={detailsSubmit}
-        {...{pathname, details}}
-      />
-    )
-    modalActions.open(content)
+    const data = {
+      closeModal: () => modalActions.close(),
+      onSubmit: detailsSubmit,
+      pathname,
+      details
+    }
+    modalActions.open("editDetails", data)
   }
 
   const headerSubmit = useCallback((newHeader) => {
@@ -409,14 +411,14 @@ const DataShow = ({ location: { pathname }}) => {
   }, [ details, modalActions, schema ])
 
   const editHeaderAction = (header, editType) => {
-    const content = (
-      <EditHeaderForm
-        closeModal={() => modalActions.close()}
-        onSubmit={ headerSubmit }
-        {...{pathname, header, editType}}
-      />
-    )
-    modalActions.open(content)
+    const data = {
+      closeModal: () => modalActions.close(),
+      onSubmit: headerSubmit,
+      pathname,
+      header,
+      editType
+    }
+    modalActions.open("editHeader", data)
   }
   
   const headerDelete = useCallback(id => {
@@ -445,14 +447,14 @@ const DataShow = ({ location: { pathname }}) => {
 
   const deleteHeaderAction = id => {
     const { title } = schema.properties[id]
-    const content = (
-      <DeleteHeaderForm
-        closeModal={() => modalActions.close()}
-        onSubmit={ headerDelete }
-        {...{pathname, id, title}}
-      />
-    )
-    modalActions.open(content)
+    const data = {
+      closeModal: () => modalActions.close(),
+      onSubmit: headerDelete,
+      pathname,
+      id,
+      title
+    }
+    modalActions.open("deleteHeader", data)
   }
 
   const ActionBar = ({ actions }) => (
