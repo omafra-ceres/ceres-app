@@ -38,6 +38,7 @@ const FormToolbar = styled.div`
 `
 
 const TableWrap = styled.div`
+  background: #ddd;
   border-top: 2px solid #ddd;
   flex-grow: 1;
   max-width: 100%;

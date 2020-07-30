@@ -10,6 +10,7 @@ const rowHeight = 52
 const columnWidth = 150
 const cellPadding = 40
 const cellBorder = 2
+const rowNumWidth = 52
 
 
 ////////////////////////////////////////
@@ -95,6 +96,24 @@ const TableCell = styled.div`
         margin-right: 10px;
       }
     }
+
+    &.focus-row {
+      background: #BBDFFF;
+    }
+
+    &.row-num {
+      border-right: none;
+      cursor: default;
+      display: flex;
+      font-family: Courier, monospace;
+      justify-content: center;
+      user-select: none;
+
+      &.focus-row {
+        background: #666;
+        color: white;
+      }
+    }
   }
 `
 
@@ -158,7 +177,7 @@ const ActionMenuItem = styled.button.attrs(() => ({
   width: 100%;
 
   &:focus {
-    background: #0092ff44;
+    background: #BBDFFF;
     outline: none;
   }
 `
@@ -239,6 +258,47 @@ const getColumns = schema => {
 
   return columns
 }
+
+const RowNums = forwardRef(({ rowCount, height, focusRows, focusAction }, ref) => {
+  const NumCell = useCallback(({ rowIndex, style }) => {
+    const cellEl = useRef()
+    const handleClick = e => {
+      focusAction(e, rowIndex)
+    }
+    return (
+      <TableCell
+        ref={ cellEl }
+        className={`${focusRows.includes(rowIndex) ? "focus-row" : ""} table-row row-num ${rowIndex % 2 ? "row-odd" : "row-even"}`}
+        onClick={ handleClick }
+        style={ style }
+      >
+        { rowIndex + 1 }
+      </TableCell>
+    )
+  }, [ focusAction, focusRows ])
+
+  return (
+    <Grid
+      ref={ ref }
+      height={ height }
+      width={ rowNumWidth }
+      columnCount={ 1 }
+      columnWidth={ () => rowNumWidth }
+      rowCount={ rowCount }
+      rowHeight={ () => rowHeight }
+      style={{
+        boxShadow: "2px 0 3px #aaa8, 0 -2px 0 #aaa",
+        overflowX: "scroll",
+        overflowY: "hidden",
+        position: "absolute",
+        top: headerHeight,
+        zIndex: 2
+      }}
+    >
+      { NumCell }
+    </Grid>
+  )
+})
 
 const ColumnHeaders = forwardRef(({
   columnCount,
@@ -363,7 +423,8 @@ const ColumnHeaders = forwardRef(({
         rowCount={ 1 }
         rowHeight={ () => headerHeight }
         style={{
-          boxShadow: "0 2px 3px #aaa8",
+          boxShadow: "0 2px 3px #aaa8, -2px 0 0 #aaa",
+          left: rowNumWidth,
           overflowX: "hidden",
           overflowY: "scroll",
           position: "absolute",
@@ -395,6 +456,7 @@ const Table = ({
   editHeaderAction,
   deleteHeaderAction
 }) => {
+  const [ focusRows, setFocusRows ] = useState([])
   const columns = useMemo(() => getColumns(schema), [schema])
   const columnWidths = useMemo(() => {
     let widths = columns.map(col => {
@@ -437,22 +499,64 @@ const Table = ({
 
     return (
       <TableCell
-        className={getCellClass(dataType, rowIndex, isLastofRow)}
+        className={`${focusRows.includes(rowIndex) ? "focus-row" : ""} ${getCellClass(dataType, rowIndex, isLastofRow)}`}
         style={ style }
       >
         { dataType === "boolean" && typeof item === "boolean" ? item ? <Check /> : <Ex /> : "" }
         { typeof item === "string" ? item : JSON.stringify(item) }
       </TableCell>
     )
-  }, [items, columns, columnWidths.length])
+  }, [items, columns, columnWidths.length, focusRows])
 
   const HeaderContainer = useRef()
+  const RowNumContainer = useRef()
 
-  const handleScroll = useCallback(({ scrollLeft, scrollUpdateWasRequested }) => {
-    if (!scrollUpdateWasRequested) {
-      HeaderContainer.current.scrollTo({ scrollLeft })
-    }
+  const handleScroll = useCallback(({ scrollLeft, scrollTop }) => {
+    HeaderContainer.current.scrollTo({ scrollLeft })
+    RowNumContainer.current.scrollTo({ scrollTop })
   }, [])
+
+  const handleFocus = (e, row) => {
+    const { shiftKey, metaKey } = e
+    const type = shiftKey
+      ? "range"
+      : metaKey 
+        ? "add"
+        : "new"
+    
+    let newFocusRows = [...focusRows]
+    
+    const handleRange = () => {
+      const start = newFocusRows[0] || 0
+      const diff = Math.abs(row - start) + 1
+      const mod = row > start ? 1 : -1
+      return Array(diff)
+        .fill()
+        .map((_, i) => (
+          start + i * mod
+        ))
+    }
+    const handleAdd = () => (
+      newFocusRows.includes(row)
+        ? newFocusRows.filter(r => r !== row)
+        : [...newFocusRows, row]
+    )
+    const handleNew = () => (
+      newFocusRows.includes(row)
+        ? newFocusRows.length > 1
+          ? [row]
+          : []
+        : [row]
+    )
+    
+    const updates = {
+      range: handleRange,
+      add: handleAdd,
+      new: handleNew
+    }
+
+    setFocusRows(updates[type]())
+  }
 
   return (
     <>
@@ -460,11 +564,18 @@ const Table = ({
         ref={ HeaderContainer }
         columnCount={ (columnWidths || []).length }
         columnWidth={ index => columnWidths[index] }
-        width={ tableSize.width }
+        width={ tableSize.width - rowNumWidth }
         headers={ columns }
         permissions={ permissions }
         editHeaderAction={ editHeaderAction }
         deleteHeaderAction={ deleteHeaderAction }
+      />
+      <RowNums
+        ref={ RowNumContainer }
+        height={tableSize.height - headerHeight}
+        rowCount={ (rowHeights || []).length }
+        focusAction={ handleFocus }
+        focusRows={ focusRows }
       />
       <Grid
         onScroll={ handleScroll }
@@ -474,15 +585,16 @@ const Table = ({
         height={tableSize.height - headerHeight}
         rowCount={(rowHeights || []).length}
         rowHeight={() => rowHeight}
-        width={tableSize.width}
+        width={tableSize.width - rowNumWidth}
         style={{
+          left: rowNumWidth,
           overflow: "scroll",
           position: "absolute",
           top: headerHeight,
           zIndex: 1
         }}
       >
-        {Cell}
+        { Cell }
       </Grid>
     </>
   )
