@@ -8,6 +8,7 @@ import DataShow from './pages/DataShow'
 import Header from './components/Header'
 
 import Modal from './components/Modal'
+import ContextMenu from './components/ContextMenu'
 
 // set of styles to hide elements from sighted users
 // they will still appear in the document flow for screen readers
@@ -50,6 +51,14 @@ const Container = styled.div`
 `
 
 function App() {
+  // const handleContextMenu = e => {
+  //   const { target: { dataset }, clientX, clientY } = e
+  //   const { contextmenu: menu, contextdata: data } = dataset
+  //   if (menu) {
+  //     e.preventDefault()
+  //     console.log(data)
+  //   }
+  // }
   return (
     <Router>
       <ThemeProvider theme={ theme }>
@@ -62,6 +71,7 @@ function App() {
           </Switch>
         </Container>
         <Modal />
+        <ContextMenu />
       </ThemeProvider>
     </Router>
   )

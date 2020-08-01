@@ -5,7 +5,8 @@ import { VariableSizeGrid as Grid } from 'react-window'
 import Form from '../components/CustomForm'
 import { Input } from './InputContainer'
 
-const headerHeight = 65
+import useContextMenu from '../customHooks/useContextMenu'
+
 const rowHeight = 52
 const columnWidth = 150
 const cellPadding = 40
@@ -18,12 +19,12 @@ const rowNumWidth = 52
 //////      Component Styles      //////
 //////                            //////
 
-const HeaderDetails = styled.div`
-  color: #444;
-  font-size: 10px;
-  font-weight: normal;
-  margin-top: 2px;
-`
+// const HeaderDetails = styled.div`
+//   color: #444;
+//   font-size: 10px;
+//   font-weight: normal;
+//   margin-top: 2px;
+// `
 
 const Check = styled.span`
   border: 2px solid currentColor;
@@ -47,12 +48,15 @@ const Ex = styled.span`
   }
 `
 
-const TableCell = styled.div`
+const TableCell = styled.div.attrs(p => ({
+  ...p.isSelected && { "data-cellselected": true }
+}))`
   border-right: 2px solid white;
   color: black;
   font-family: sans-serif;
   padding: 16px 20px;
   position: relative;
+  user-select: none;
 
   *.blur-cells & {
     filter: blur(2px);
@@ -74,6 +78,10 @@ const TableCell = styled.div`
 
     &:last-of-type {
       border-right: none;
+    }
+
+    &[data-cellselected] {
+      background: #ddd;
     }
   }
 
@@ -97,7 +105,7 @@ const TableCell = styled.div`
       }
     }
 
-    &.focus-row {
+    &[data-cellselected] {
       background: #BBDFFF;
     }
 
@@ -109,76 +117,10 @@ const TableCell = styled.div`
       justify-content: center;
       user-select: none;
 
-      &.focus-row {
-        background: #666;
-        color: white;
+      &[data-cellselected] {
+        background: #bbb;
       }
     }
-  }
-`
-
-const HeaderActionsButton = styled.button`
-  position: absolute;
-  top: 5px;
-  right: 0;
-  
-  background: white;
-  border: none;
-  border-radius: 4px;
-  color: #444;
-  font-weight: bold;
-  font-size: 16px;
-  height: 26px;
-  opacity: 0.2;
-  padding: 0;
-  text-align: center;
-  width: 20px;
-
-  *:hover > &, &:focus {
-    opacity: 1;
-  }
-
-  &:hover {
-    background: #f4f4f4;
-  }
-
-  &:active {
-    background: #ddd;
-  }
-`
-
-const HeaderActionsMenu = styled.ul.attrs(p => ({
-  style: {
-    left: p.right - 120 || 0,
-    display: p.isOpen ? "block" : "none"
-  }
-}))`
-  background: white;
-  border-radius: 1px;
-  box-shadow: 0 2px 6px 2px #3c404326;
-  list-style: none;
-  margin: 0;
-  padding: 5px 0;
-  position: absolute;
-  top: 5px;
-  width: 120px;
-  z-index: 2;
-`
-
-const ActionMenuItem = styled.button.attrs(() => ({
-  onMouseOver: e => e.target.focus()
-}))`
-  background: white;
-  border: none;
-  display: block;
-  line-height: 30px;
-  padding: 0 10px;
-  text-align: left;
-  width: 100%;
-
-  &:focus {
-    background: #BBDFFF;
-    outline: none;
   }
 `
 
@@ -217,7 +159,7 @@ const countEmpty = (tableSize, contentSize, fillSize) => {
 
 const addEmptyRows = (heights, parent) => {
   const { offsetHeight: height } = parent
-  const contentHeight = (heights.length * rowHeight) + headerHeight
+  const contentHeight = (heights.length * rowHeight) + rowHeight
 
   const emptyRows = countEmpty(height - 15, contentHeight, rowHeight)
   if (emptyRows === 0) return heights
@@ -259,23 +201,10 @@ const getColumns = schema => {
   return columns
 }
 
-const RowNums = forwardRef(({ rowCount, height, focusRows, focusAction }, ref) => {
-  const NumCell = useCallback(({ rowIndex, style }) => {
-    const cellEl = useRef()
-    const handleClick = e => {
-      focusAction(e, rowIndex)
-    }
-    return (
-      <TableCell
-        ref={ cellEl }
-        className={`${focusRows.includes(rowIndex) ? "focus-row" : ""} table-row row-num ${rowIndex % 2 ? "row-odd" : "row-even"}`}
-        onClick={ handleClick }
-        style={ style }
-      >
-        { rowIndex + 1 }
-      </TableCell>
-    )
-  }, [ focusAction, focusRows ])
+const RowNums = forwardRef(({ rowCount, height, Cell }, ref) => {
+  const NumCell = ({ rowIndex, style }) => (
+    <Cell {...{ rowIndex, style }} type="rownum" />
+  )
 
   return (
     <Grid
@@ -291,7 +220,7 @@ const RowNums = forwardRef(({ rowCount, height, focusRows, focusAction }, ref) =
         overflowX: "scroll",
         overflowY: "hidden",
         position: "absolute",
-        top: headerHeight,
+        top: rowHeight,
         zIndex: 2
       }}
     >
@@ -304,149 +233,51 @@ const ColumnHeaders = forwardRef(({
   columnCount,
   columnWidth,
   width,
-  headers,
-  permissions,
-  editHeaderAction,
-  deleteHeaderAction
+  Cell
 }, ref) => {
-  const [ menuState, setMenuState ] = useState({})
-  const menuContainer = useRef()
-
-  useEffect(() => {
-    if (menuState.isOpen) {
-      menuContainer.current.firstChild.firstChild.focus()
-    }
-  }, [ menuState ])
-
-  const HeaderCell = useCallback(({ columnIndex, style }) => {
-    const { label, dataType, details } = headers[columnIndex] || {}
-    const cellEl = useRef()
-
-    const handleActionsClick = () => {
-      const { scrollLeft } = ref.current.state
-      const { offsetLeft, offsetWidth } = cellEl.current
-      const offsetRight = offsetLeft - scrollLeft + offsetWidth
-      
-      setMenuState({
-        isOpen: true,
-        index: columnIndex,
-        right: offsetRight
-      })
-    }
-
-    return label ? (
-      <TableCell
-        ref={ cellEl }
-        className={ `data-${dataType} table-header` }
-        style={ style }
-      >
-        { label }
-        <HeaderDetails>{ details }</HeaderDetails>
-        <HeaderActionsButton onClick={ handleActionsClick }>︙</HeaderActionsButton>
-      </TableCell>
-    ) : (
-      <TableCell
-        {...{style}}
-        className="table-header"
-      />
-    )
-  }, [ headers, ref ])
-
-  const closeMenu = () => {
-    setMenuState({ isOpen: false })
-  }
-
-  const handleMenuBlur = e => {
-    if (!e.relatedTarget) closeMenu()
-  }
-
-  const handleMenuKeyDown = e => {
-    if (e.key === "Escape") closeMenu()
-    
-    if (!["Tab", "ArrowDown", "ArrowUp"].includes(e.key)) return
-
-    const children = Array.from(e.currentTarget.children)
-      .map(ch => ch.firstChild)
-      .filter(ch => !ch.attributes.disabled)
-    const first = children[0]
-    const last = children[children.length - 1]
-    
-    // trap focus inside menu while menu is open
-    if (e.key === "Tab") {
-      if (e.target === first && e.shiftKey) {
-        e.preventDefault()
-        last.focus()
-      }
-      if (e.target === last && !e.shiftKey) {
-        e.preventDefault()
-        first.focus()
-      }
-    }
-
-    // allow arrow keys to navigate menu
-    if (e.key === "ArrowDown") {
-      if (e.target === last) {
-        first.focus()
-      } else {
-        children[children.indexOf(e.target) + 1].focus()
-      }
-    }
-    if (e.key === "ArrowUp") {
-      if (e.target === first) {
-        last.focus()
-      } else {
-        children[children.indexOf(e.target) - 1].focus()
-      }
-    }
-  }
-
-  const handleNameClick = () => {
-    closeMenu()
-    editHeaderAction(headers[menuState.index], "title")
-  }
   
-  const handleTypeClick = () => {
-    closeMenu()
-    editHeaderAction(headers[menuState.index], "type")
-  }
-
-  const handleDeleteClick = () => {
-    closeMenu()
-    deleteHeaderAction(headers[menuState.index].id)
-  }
+  const HeaderCell = ({ columnIndex, style }) => (
+    <Cell {...{ columnIndex, style }} type="header" />
+  )
 
   return (
-    <>
-      <Grid
-        ref={ ref }
-        height={ headerHeight }
-        rowCount={ 1 }
-        rowHeight={ () => headerHeight }
-        style={{
-          boxShadow: "0 2px 3px #aaa8, -2px 0 0 #aaa",
-          left: rowNumWidth,
-          overflowX: "hidden",
-          overflowY: "scroll",
-          position: "absolute",
-          zIndex: 2
-        }}
-        {...{columnCount, columnWidth, width}}
-      >
-        { HeaderCell }
-      </Grid>
-      <HeaderActionsMenu
-        {...menuState}
-        ref={ menuContainer }
-        onKeyDown={ handleMenuKeyDown }
-        onBlur={ handleMenuBlur }
-      >
-        <li><ActionMenuItem disabled={ !permissions.title } onClick={ handleNameClick }>Edit Name</ActionMenuItem></li>
-        <li><ActionMenuItem disabled={ !permissions.type } onClick={ handleTypeClick }>Edit Type</ActionMenuItem></li>
-        <li><ActionMenuItem disabled={ !permissions.delete } onClick={ handleDeleteClick }>Delete</ActionMenuItem></li>
-      </HeaderActionsMenu>
-    </>
+    <Grid
+      ref={ ref }
+      height={ rowHeight }
+      rowCount={ 1 }
+      rowHeight={ () => rowHeight }
+      style={{
+        boxShadow: "0 2px 3px #aaa8, -2px 0 0 #aaa",
+        left: rowNumWidth,
+        overflowX: "hidden",
+        overflowY: "scroll",
+        position: "absolute",
+        zIndex: 2
+      }}
+      {...{columnCount, columnWidth, width}}
+    >
+      { HeaderCell }
+    </Grid>
   )
 })
+
+const copyText = text => {
+  const el = document.createElement("textarea")
+  el.value = text
+  el.setAttribute('readonly', '')
+  el.style.position = 'absolute'
+  el.style.left = '-9999px'
+  document.body.appendChild(el)
+  el.select()
+  document.execCommand('copy')
+  document.body.removeChild(el)
+}
+
+const getRange = (start, end) => {
+  const diff = Math.abs(end - start) + 1
+  const mod = end > start ? 1 : -1
+  return Array(diff).fill().map((_, i) => start + i * mod)
+}
 
 const Table = ({
   schema={},
@@ -456,7 +287,7 @@ const Table = ({
   editHeaderAction,
   deleteHeaderAction
 }) => {
-  const [ focusRows, setFocusRows ] = useState([])
+  const [ selected, setSelected ] = useState([])
   const columns = useMemo(() => getColumns(schema), [schema])
   const columnWidths = useMemo(() => {
     let widths = columns.map(col => {
@@ -492,21 +323,211 @@ const Table = ({
     }
   }, [ parentNode ])
 
-  const Cell = useCallback(({ columnIndex, rowIndex, style }) => {
-    const {id, dataType} = columns[columnIndex] || {}
-    const item = (items[rowIndex] || {})[id]
+  const copySelected = useCallback(() => {
+    const rows = selected.map(sel => sel[1])
+    const cols = selected.map(sel => sel[0])
+    
+    const minRow = Math.min(...rows)
+    const maxRow = Math.max(...rows)
+    const minCol = Math.min(...cols)
+    const maxCol = Math.max(...cols)
+
+    const rowDiff = maxRow - minRow + 1
+    const colDiff = maxCol - minCol + 1
+
+    const matrix = Array(rowDiff).fill().map(() => Array(colDiff).fill(""))
+
+    selected.forEach(([x, y]) => {
+      const item = items[y] || []
+      const key = (columns[x] || {}).id
+      if (key) matrix[y - minRow][x - minCol] = item[key]
+    })
+    
+    const content = matrix.map(r => r.join("\t")).join("\n")
+    copyText(content)
+  }, [ selected, columns, items ])
+
+  const checkSelected = useMemo(() => ({
+    cell: cell => selected.findIndex(el => el[0] === cell[0] && el[1] === cell[1]) > -1,
+    col: col => selected.findIndex(el => el[0] === col) > -1,
+    row: row => selected.findIndex(el => el[1] === row) > -1,
+  }), [ selected ])
+
+  const handleFocus = useCallback((e, coords) => {
+    const { shiftKey, metaKey } = e
+    const type = shiftKey ? "range" : metaKey ? "add" : "new"
+    const [x, y] = coords
+    
+    const handleRange = () => {
+      const [colStart, rowStart] = selected[0] || coords
+      const rows = getRange(rowStart, y)
+      const cols = getRange(colStart, x)
+      
+      return rows.reduce((acc, row) => [...acc, ...cols.map(col => [col, row])], [])
+    }
+    const handleAdd = () => (
+      checkSelected.cell(coords)
+        ? selected
+        : [...selected, coords]
+    )
+    const handleNew = () => (
+      checkSelected.cell(coords)
+        ? selected.length > 1
+          ? [coords]
+          : []
+        : [coords]
+    )
+    
+    const updates = {
+      range: handleRange,
+      add: handleAdd,
+      new: handleNew
+    }
+
+    setSelected(updates[type]())
+  }, [ selected, checkSelected ])
+
+  const selectRow = useCallback((y, e = {}) => {
+    const { shiftKey, metaKey } = e
+    const type = shiftKey ? "range" : metaKey ? "add" : "new"
+
+    const getRow = (row) => columnWidths.map((_, i) => [i, row])
+    
+    const handleRange = () => {
+      const rowStart = (selected[0] || [])[1] || y
+      const rows = getRange(rowStart, y)
+      return rows.reduce((acc, row) => {
+        return [...acc, ...getRow(row)]
+      }, [])
+    }
+    const handleAdd = () => [...selected, ...getRow(y)]
+    const handleNew = () => getRow(y)
+
+    const updates = {
+      range: handleRange,
+      add: handleAdd,
+      new: handleNew
+    }
+
+    setSelected(updates[type]())
+  }, [ columnWidths, selected ])
+  
+  const selectCol = useCallback((x, e = {}) => {
+    const { shiftKey, metaKey } = e
+    const type = shiftKey ? "range" : metaKey ? "add" : "new"
+
+    const getCol = (col) => rowHeights.map((_, i) => [col, i])
+    
+    const handleRange = () => {
+      const colStart = (selected[0] || [])[0] || x
+      const cols = getRange(colStart, x)
+      const newSelection = cols.reduce((acc, col) => {
+        return [...acc, ...getCol(col)]
+      }, [])
+      return(newSelection)
+    }
+    const handleAdd = () => [...selected, ...getCol(x)]
+    const handleNew = () => getCol(x)
+
+    const updates = {
+      range: handleRange,
+      add: handleAdd,
+      new: handleNew
+    }
+
+    setSelected(updates[type]())
+  }, [ rowHeights, selected ])
+
+  const menuOptions = useMemo(() => {
+    const headerNameAction = coords => editHeaderAction(columns[coords.split(",")[0]], "title")
+    const headerTypeAction = coords => editHeaderAction(columns[coords.split(",")[0]], "type")
+    const deleteAction = coords => deleteHeaderAction(columns[coords.split(",")[0]].id)
+    return {
+      header: {
+        onOpen: coords => selectCol(Number.parseInt(coords.split(",")[0])),
+        options: [
+          { label: "Copy Column", action: copySelected },
+          { label: "Edit Name", action: headerNameAction, disabled: () => !permissions.title },
+          { label: "Edit Type", action: headerTypeAction, disabled: () => !permissions.type },
+          { label: "Delete", action: deleteAction, disabled: () => !permissions.delete },
+        ]
+      },
+      rownum: {
+        onOpen: coords => selectRow(Number.parseInt(coords.split(",")[1])),
+        options: [
+          { label: "Copy Row", action: copySelected }
+        ]
+      },
+      tablecell: [
+
+      ]
+    }
+  }, [ columns, permissions, editHeaderAction, deleteHeaderAction, selectRow, selectCol, copySelected ])
+
+  useContextMenu(menuOptions)
+
+  useEffect(() => {
+    const handleKeyDown = e => {
+      const { key, metaKey, shiftKey } = e
+      if (key === "c" && metaKey && !shiftKey) {
+        e.preventDefault()
+        copySelected()
+      }
+    }
+    const handleClick = e => {
+      if (!parentNode.contains(e.target)) console.log("outside")
+    }
+    document.addEventListener("keydown", handleKeyDown)
+    document.addEventListener("click", handleClick)
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown)
+      document.removeEventListener("click", handleClick)
+    }
+  }, [ parentNode, selected, copySelected ])
+  
+  const Cell = useCallback(({ columnIndex=0, rowIndex=0, style={}, type }) => {
+    const { id, label, dataType } = columns[columnIndex] || {}
     const isLastofRow = columnIndex + 1 === columnWidths.length
 
+    let contextInfo = {
+      "data-contextmenu": type,
+      "data-contextdata": [columnIndex, rowIndex]
+    }
+    let content, className, isSelected, onMouseDown
+
+    switch (type) {
+      case "header":
+        className = `data-${dataType} table-header`
+        isSelected = checkSelected.col(columnIndex)
+        content = label
+        if (!label) delete contextInfo["data-contextmenu"]
+        onMouseDown = (e) => selectCol(columnIndex, e)
+        break
+      case "rownum":
+        className = `${selected.includes(rowIndex) ? "focus-cell" : ""} table-row row-num ${rowIndex % 2 ? "row-odd" : "row-even"}`
+        isSelected = checkSelected.row(rowIndex)
+        content = rowIndex + 1
+        onMouseDown = (e) => selectRow(rowIndex, e)
+        break
+      default:
+        const item = (items[rowIndex] || {})[id]
+        className = `${selected.includes(rowIndex) ? "focus-cell" : ""} ${getCellClass(dataType, rowIndex, isLastofRow)}`
+        isSelected = checkSelected.cell([columnIndex, rowIndex])
+        content = (
+          <>
+            { dataType === "boolean" && typeof item === "boolean" ? item ? <Check /> : <Ex /> : "" }
+            { typeof item === "string" ? item : JSON.stringify(item) }
+          </>
+        )
+        onMouseDown = e => handleFocus(e, [columnIndex, rowIndex])
+    }
+    
     return (
-      <TableCell
-        className={`${focusRows.includes(rowIndex) ? "focus-row" : ""} ${getCellClass(dataType, rowIndex, isLastofRow)}`}
-        style={ style }
-      >
-        { dataType === "boolean" && typeof item === "boolean" ? item ? <Check /> : <Ex /> : "" }
-        { typeof item === "string" ? item : JSON.stringify(item) }
+      <TableCell {...{ ...contextInfo, className, style, isSelected, onMouseDown }}>
+        { content }
       </TableCell>
     )
-  }, [items, columns, columnWidths.length, focusRows])
+  }, [items, columns, columnWidths.length, selected, checkSelected, handleFocus, selectCol, selectRow])
 
   const HeaderContainer = useRef()
   const RowNumContainer = useRef()
@@ -516,48 +537,6 @@ const Table = ({
     RowNumContainer.current.scrollTo({ scrollTop })
   }, [])
 
-  const handleFocus = (e, row) => {
-    const { shiftKey, metaKey } = e
-    const type = shiftKey
-      ? "range"
-      : metaKey 
-        ? "add"
-        : "new"
-    
-    let newFocusRows = [...focusRows]
-    
-    const handleRange = () => {
-      const start = newFocusRows[0] || 0
-      const diff = Math.abs(row - start) + 1
-      const mod = row > start ? 1 : -1
-      return Array(diff)
-        .fill()
-        .map((_, i) => (
-          start + i * mod
-        ))
-    }
-    const handleAdd = () => (
-      newFocusRows.includes(row)
-        ? newFocusRows.filter(r => r !== row)
-        : [...newFocusRows, row]
-    )
-    const handleNew = () => (
-      newFocusRows.includes(row)
-        ? newFocusRows.length > 1
-          ? [row]
-          : []
-        : [row]
-    )
-    
-    const updates = {
-      range: handleRange,
-      add: handleAdd,
-      new: handleNew
-    }
-
-    setFocusRows(updates[type]())
-  }
-
   return (
     <>
       <ColumnHeaders
@@ -565,24 +544,20 @@ const Table = ({
         columnCount={ (columnWidths || []).length }
         columnWidth={ index => columnWidths[index] }
         width={ tableSize.width - rowNumWidth }
-        headers={ columns }
-        permissions={ permissions }
-        editHeaderAction={ editHeaderAction }
-        deleteHeaderAction={ deleteHeaderAction }
+        Cell={ Cell }
       />
       <RowNums
         ref={ RowNumContainer }
-        height={tableSize.height - headerHeight}
+        height={tableSize.height - rowHeight}
         rowCount={ (rowHeights || []).length }
-        focusAction={ handleFocus }
-        focusRows={ focusRows }
+        Cell={ Cell }
       />
       <Grid
         onScroll={ handleScroll }
         className="Grid"
         columnCount={(columnWidths || []).length}
         columnWidth={index => columnWidths[index]}
-        height={tableSize.height - headerHeight}
+        height={tableSize.height - rowHeight}
         rowCount={(rowHeights || []).length}
         rowHeight={() => rowHeight}
         width={tableSize.width - rowNumWidth}
@@ -590,7 +565,7 @@ const Table = ({
           left: rowNumWidth,
           overflow: "scroll",
           position: "absolute",
-          top: headerHeight,
+          top: rowHeight,
           zIndex: 1
         }}
       >

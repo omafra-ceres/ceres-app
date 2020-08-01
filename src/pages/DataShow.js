@@ -38,7 +38,6 @@ const FormToolbar = styled.div`
 `
 
 const TableWrap = styled.div`
-  background: #ddd;
   border-top: 2px solid #ddd;
   flex-grow: 1;
   max-width: 100%;
@@ -226,8 +225,9 @@ const EditHeaderForm = ({ pathname, onSubmit, closeModal, header, editType }) =>
   const formEl = useRef()
 
   useEffect(() => {
+    setNewHeader({ title, type })
     formEl.current.formElement[0].focus()
-  }, [ header ])
+  }, [ title, type ])
   
   const handleSubmit = () => {
     axios.post(`http://localhost:4000/data/${pathname.slice(1)}/update`, {
