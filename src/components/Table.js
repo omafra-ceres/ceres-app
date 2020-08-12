@@ -2,8 +2,9 @@ import React, { useCallback, useMemo, forwardRef, useRef, useState, useEffect } 
 import styled from 'styled-components'
 import { VariableSizeGrid as Grid } from 'react-window'
 
-import Form from '../components/CustomForm'
-import { Input } from './InputContainer'
+import { getRange } from '../utils/numUtils'
+import { copyText, getTextWidth } from '../utils/textUtils'
+import { matrixToSpreadsheet, getEmptyMatrix } from '../utils/arrayUtils'
 
 import useContextMenu from '../customHooks/useContextMenu'
 
@@ -25,6 +26,11 @@ const rowNumWidth = 52
 //   font-weight: normal;
 //   margin-top: 2px;
 // `
+
+const TableContainer = styled.div`
+  overflow: hidden;
+  position: relative;
+`
 
 const Check = styled.span`
   border: 2px solid currentColor;
@@ -129,21 +135,6 @@ const TableCell = styled.div.attrs(p => ({
 //////                            //////
 ////////////////////////////////////////
 
-
-// measure the width of text using a canvas
-// without rendering anything to the DOM
-// caches canvas for reuse for performance
-const getTextWidth = (text, font="normal 16px sans-serif") => {
-  if (!getTextWidth.canvas) {
-    const canvas = document.createElement("canvas")
-    getTextWidth.canvas = canvas
-  }
-  const context = getTextWidth.canvas.getContext("2d")
-  context.font = font
-  const metrics = context.measureText(text)
-  return Math.ceil(metrics.width)
-}
-
 const getCellClass = (dataType, rowIndex, isLastofRow) => {
   const isOdd = rowIndex % 2 === 1
   const dataClass = `data-${dataType}`
@@ -157,11 +148,10 @@ const countEmpty = (tableSize, contentSize, fillSize) => {
   return diff < 1 ? 0 : Math.ceil(diff / fillSize)
 }
 
-const addEmptyRows = (heights, parent) => {
-  const { offsetHeight: height } = parent
+const addEmptyRows = (heights, parentHeight) => {
   const contentHeight = (heights.length * rowHeight) + rowHeight
 
-  const emptyRows = countEmpty(height - 15, contentHeight, rowHeight)
+  const emptyRows = countEmpty(parentHeight - 15, contentHeight, rowHeight)
   if (emptyRows === 0) return heights
 
   return [
@@ -170,11 +160,10 @@ const addEmptyRows = (heights, parent) => {
   ]
 }
 
-const addEmptyColumns = (columns=[], parent) => {
-  const { offsetWidth: width } = parent
+const addEmptyColumns = (columns=[], tableWidth) => {
   const contentWidth = columns.reduce((t, w) => t + w, 0)
 
-  const emptyCols = countEmpty(width - 15, contentWidth, columnWidth)
+  const emptyCols = countEmpty(tableWidth - 15, contentWidth, columnWidth)
   if (emptyCols === 0) return columns
 
   return [
@@ -261,34 +250,28 @@ const ColumnHeaders = forwardRef(({
   )
 })
 
-const copyText = text => {
-  const el = document.createElement("textarea")
-  el.value = text
-  el.setAttribute('readonly', '')
-  el.style.position = 'absolute'
-  el.style.left = '-9999px'
-  document.body.appendChild(el)
-  el.select()
-  document.execCommand('copy')
-  document.body.removeChild(el)
-}
-
-const getRange = (start, end) => {
-  const diff = Math.abs(end - start) + 1
-  const mod = end > start ? 1 : -1
-  return Array(diff).fill().map((_, i) => start + i * mod)
-}
-
 const Table = ({
   schema={},
   items=[],
-  parentNode,
   permissions,
   editHeaderAction,
-  deleteHeaderAction
+  deleteHeaderAction,
+  style
 }) => {
   const [ selected, setSelected ] = useState([])
+  const [ tableSize, setTableSize ] = useState({ width: 0, height: 0 })
+  const tableRef = useRef()
+
+  const measuredTable = useCallback(node => {
+    if (node !== null) {
+      tableRef.current = node
+      const { offsetWidth: width, offsetHeight: height } = node
+      setTableSize({ width, height })
+    }
+  }, [])
+  
   const columns = useMemo(() => getColumns(schema), [schema])
+  
   const columnWidths = useMemo(() => {
     let widths = columns.map(col => {
       let { id, dataType, width } = col
@@ -302,48 +285,39 @@ const Table = ({
       return width + cellPadding + cellBorder
     })
 
-    widths = addEmptyColumns(widths, parentNode)
+    widths = addEmptyColumns(widths, tableSize.width)
     widths[widths.length - 1] -= cellBorder
 
     return widths
-  }, [items, columns, parentNode])
+  }, [items, columns, tableSize])
 
   const rowHeights = useMemo(() => {
     let heights = Array(items.length).fill(rowHeight)
-    heights = addEmptyRows(heights, parentNode)
+    heights = addEmptyRows(heights, tableSize.height)
     return heights
-  }, [items, parentNode])
-
-  const tableSize = useMemo(() => {
-    const { offsetWidth, offsetHeight } = parentNode
-
-    return {
-      width: offsetWidth,
-      height: offsetHeight
-    }
-  }, [ parentNode ])
+  }, [items, tableSize])
 
   const copySelected = useCallback(() => {
-    const rows = selected.map(sel => sel[1])
-    const cols = selected.map(sel => sel[0])
-    
-    const minRow = Math.min(...rows)
-    const maxRow = Math.max(...rows)
-    const minCol = Math.min(...cols)
-    const maxCol = Math.max(...cols)
+    const rows = selected.map(sel => sel[1]).sort((a, b) => a - b)
+    const cols = selected.map(sel => sel[0]).sort((a, b) => a - b)
+
+    const minRow = rows[0]
+    const maxRow = rows[rows.length - 1]
+    const minCol = cols[0]
+    const maxCol = cols[cols.length - 1]
 
     const rowDiff = maxRow - minRow + 1
     const colDiff = maxCol - minCol + 1
 
-    const matrix = Array(rowDiff).fill().map(() => Array(colDiff).fill(""))
+    const matrix = getEmptyMatrix(rowDiff, colDiff)
 
     selected.forEach(([x, y]) => {
       const item = items[y] || []
       const key = (columns[x] || {}).id
-      if (key) matrix[y - minRow][x - minCol] = item[key]
+      matrix[y - minRow][x - minCol] = item[key]
     })
-    
-    const content = matrix.map(r => r.join("\t")).join("\n")
+
+    const content = matrixToSpreadsheet(matrix)
     copyText(content)
   }, [ selected, columns, items ])
 
@@ -360,8 +334,8 @@ const Table = ({
     
     const handleRange = () => {
       const [colStart, rowStart] = selected[0] || coords
-      const rows = getRange(rowStart, y)
-      const cols = getRange(colStart, x)
+      const rows = getRange([rowStart, y])
+      const cols = getRange([colStart, x])
       
       return rows.reduce((acc, row) => [...acc, ...cols.map(col => [col, row])], [])
     }
@@ -387,47 +361,30 @@ const Table = ({
     setSelected(updates[type]())
   }, [ selected, checkSelected ])
 
-  const selectRow = useCallback((y, e = {}) => {
+  const focusBulk = useCallback((num, bulkType, e={}) => {
     const { shiftKey, metaKey } = e
     const type = shiftKey ? "range" : metaKey ? "add" : "new"
 
     const getRow = (row) => columnWidths.map((_, i) => [i, row])
-    
-    const handleRange = () => {
-      const rowStart = (selected[0] || [])[1] || y
-      const rows = getRange(rowStart, y)
-      return rows.reduce((acc, row) => {
-        return [...acc, ...getRow(row)]
-      }, [])
-    }
-    const handleAdd = () => [...selected, ...getRow(y)]
-    const handleNew = () => getRow(y)
-
-    const updates = {
-      range: handleRange,
-      add: handleAdd,
-      new: handleNew
-    }
-
-    setSelected(updates[type]())
-  }, [ columnWidths, selected ])
-  
-  const selectCol = useCallback((x, e = {}) => {
-    const { shiftKey, metaKey } = e
-    const type = shiftKey ? "range" : metaKey ? "add" : "new"
-
     const getCol = (col) => rowHeights.map((_, i) => [col, i])
+
+    const getters = {
+      row: getRow,
+      col: getCol
+    }
+
+    const getBulk = getters[bulkType]
     
     const handleRange = () => {
-      const colStart = (selected[0] || [])[0] || x
-      const cols = getRange(colStart, x)
-      const newSelection = cols.reduce((acc, col) => {
-        return [...acc, ...getCol(col)]
-      }, [])
-      return(newSelection)
+      let start = (selected[0] || [])[bulkType === "col" ? 0 : 1]
+      const bulk = getRange([start, num])
+      return bulk.reduce((acc, item) => [
+        ...acc,
+        ...getBulk(item)
+      ], [])
     }
-    const handleAdd = () => [...selected, ...getCol(x)]
-    const handleNew = () => getCol(x)
+    const handleAdd = () => [...selected, ...getBulk(num)]
+    const handleNew = () => getBulk(num)
 
     const updates = {
       range: handleRange,
@@ -436,7 +393,7 @@ const Table = ({
     }
 
     setSelected(updates[type]())
-  }, [ rowHeights, selected ])
+  }, [ columnWidths, selected, rowHeights ])
 
   const menuOptions = useMemo(() => {
     const headerNameAction = coords => editHeaderAction(columns[coords.split(",")[0]], "title")
@@ -444,7 +401,7 @@ const Table = ({
     const deleteAction = coords => deleteHeaderAction(columns[coords.split(",")[0]].id)
     return {
       header: {
-        onOpen: coords => selectCol(Number.parseInt(coords.split(",")[0])),
+        onOpen: coords => focusBulk(Number.parseInt(coords.split(",")[0]), "col"),
         options: [
           { label: "Copy Column", action: copySelected },
           { label: "Edit Name", action: headerNameAction, disabled: () => !permissions.title },
@@ -453,7 +410,7 @@ const Table = ({
         ]
       },
       rownum: {
-        onOpen: coords => selectRow(Number.parseInt(coords.split(",")[1])),
+        onOpen: coords => focusBulk(Number.parseInt(coords.split(",")[1]), "row"),
         options: [
           { label: "Copy Row", action: copySelected }
         ]
@@ -462,7 +419,7 @@ const Table = ({
 
       ]
     }
-  }, [ columns, permissions, editHeaderAction, deleteHeaderAction, selectRow, selectCol, copySelected ])
+  }, [ columns, permissions, editHeaderAction, deleteHeaderAction, focusBulk, copySelected ])
 
   useContextMenu(menuOptions)
 
@@ -475,7 +432,7 @@ const Table = ({
       }
     }
     const handleClick = e => {
-      if (!parentNode.contains(e.target)) console.log("outside")
+      if (!tableRef.current.contains(e.target)) console.log("outside")
     }
     document.addEventListener("keydown", handleKeyDown)
     document.addEventListener("click", handleClick)
@@ -483,7 +440,7 @@ const Table = ({
       document.removeEventListener("keydown", handleKeyDown)
       document.removeEventListener("click", handleClick)
     }
-  }, [ parentNode, selected, copySelected ])
+  }, [ selected, copySelected ])
   
   const Cell = useCallback(({ columnIndex=0, rowIndex=0, style={}, type }) => {
     const { id, label, dataType } = columns[columnIndex] || {}
@@ -501,13 +458,13 @@ const Table = ({
         isSelected = checkSelected.col(columnIndex)
         content = label
         if (!label) delete contextInfo["data-contextmenu"]
-        onMouseDown = (e) => selectCol(columnIndex, e)
+        onMouseDown = (e) => focusBulk(columnIndex, "col", e)
         break
       case "rownum":
         className = `${selected.includes(rowIndex) ? "focus-cell" : ""} table-row row-num ${rowIndex % 2 ? "row-odd" : "row-even"}`
         isSelected = checkSelected.row(rowIndex)
         content = rowIndex + 1
-        onMouseDown = (e) => selectRow(rowIndex, e)
+        onMouseDown = (e) => focusBulk(rowIndex, "row", e)
         break
       default:
         const item = (items[rowIndex] || {})[id]
@@ -527,7 +484,7 @@ const Table = ({
         { content }
       </TableCell>
     )
-  }, [items, columns, columnWidths.length, selected, checkSelected, handleFocus, selectCol, selectRow])
+  }, [items, columns, columnWidths.length, selected, checkSelected, handleFocus, focusBulk ])
 
   const HeaderContainer = useRef()
   const RowNumContainer = useRef()
@@ -538,7 +495,7 @@ const Table = ({
   }, [])
 
   return (
-    <>
+    <TableContainer ref={ measuredTable } {...{ style }}>
       <ColumnHeaders
         ref={ HeaderContainer }
         columnCount={ (columnWidths || []).length }
@@ -571,7 +528,7 @@ const Table = ({
       >
         { Cell }
       </Grid>
-    </>
+    </TableContainer>
   )
 }
 

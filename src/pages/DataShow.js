@@ -37,14 +37,6 @@ const FormToolbar = styled.div`
   margin-top: 30px;
 `
 
-const TableWrap = styled.div`
-  border-top: 2px solid #ddd;
-  flex-grow: 1;
-  max-width: 100%;
-  overflow: hidden;
-  position: relative;
-`
-
 const DescriptionContainer = styled.div`
   max-width: 800px;
   margin-left: 25px;
@@ -479,21 +471,20 @@ const DataShow = ({ location: { pathname }}) => {
         { label: "Add Item", action: addItemAction },
         { label: "Edit Details", action: editDetailsAction }
       ]} />
-      <TableWrap
-        ref={tableContainer}
-      >
-        { schema && items ? (
-          <Table
-            parentNode={ tableContainer.current }
-            schema={ schema }
-            items={ items }
-            permissions={ permissions }
-            editHeaderAction={ editHeaderAction }
-            deleteHeaderAction={ deleteHeaderAction }
-          />
-        ) : "" }
-      </TableWrap>
-      {/* <AddRow /> */}
+      { schema && items ? (
+        <Table
+          schema={ schema }
+          items={ items }
+          permissions={ permissions }
+          editHeaderAction={ editHeaderAction }
+          deleteHeaderAction={ deleteHeaderAction }
+          style={{
+            borderTop: "2px solid #ddd",
+            flexGrow: "1",
+            maxWidth: "100%",
+          }}
+        />
+      ) : "" }
     </Page>
   ) : ""
 }
