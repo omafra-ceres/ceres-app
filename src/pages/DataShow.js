@@ -3,6 +3,7 @@ import styled from 'styled-components'
 import axios from 'axios'
 
 import Table from '../components/Table'
+import NewTable from '../components/NewTable'
 import Form from '../components/CustomForm'
 import Button from '../components/Button'
 
@@ -326,14 +327,31 @@ const DeleteHeaderForm = ({closeModal, onSubmit, pathname, id, title}) => {
 const DataShow = ({ location: { pathname }}) => {
   const [{details, schema}, setDataStructure] = useState({})
   const [items, setItems] = useState()
+
+  const tableHeaders = useMemo(() => {
+    if (!schema) return
+    const keys = Object.keys(schema.properties)
+    return keys.map(key => ({ id: key, ...schema.properties[key] }))
+  }, [schema])
+
+  const tableItems = useMemo(() => {
+    if (!tableHeaders || !items) return
+    const itemArr = []
+    items.forEach(item => {
+      tableHeaders.forEach(header => {
+        itemArr.push(item[header.id])
+      })
+    })
+    return itemArr
+  }, [items, tableHeaders])
+  
   const modalActions = useModal({
     addItem: AddItemForm,
     editDetails: EditDetailsForm,
     editHeader: EditHeaderForm,
     deleteHeader: DeleteHeaderForm
   })[1]
-  const tableContainer = useRef()
-
+  
   const permissions = useMemo(() => ({
     title: true,
     type: !(items || []).length,
@@ -471,13 +489,24 @@ const DataShow = ({ location: { pathname }}) => {
         { label: "Add Item", action: addItemAction },
         { label: "Edit Details", action: editDetailsAction }
       ]} />
-      { schema && items ? (
-        <Table
-          schema={ schema }
-          items={ items }
-          permissions={ permissions }
-          editHeaderAction={ editHeaderAction }
-          deleteHeaderAction={ deleteHeaderAction }
+      { tableHeaders && tableItems ? (
+        // <Table
+        //   schema={ schema }
+        //   items={ items }
+        //   permissions={ permissions }
+        //   editHeaderAction={ editHeaderAction }
+        //   deleteHeaderAction={ deleteHeaderAction }
+        //   style={{
+        //     borderTop: "2px solid #ddd",
+        //     flexGrow: "1",
+        //     maxWidth: "100%",
+        //   }}
+        // />
+        <NewTable
+          headers={ tableHeaders }
+          items={ tableItems }
+          columnCount={ tableHeaders.length }
+          rowCount={ items.length }
           style={{
             borderTop: "2px solid #ddd",
             flexGrow: "1",
