@@ -3,9 +3,11 @@ import styled from 'styled-components'
 
 import useScrollLock from '../customHooks/useScrollLock'
 
-import { getEmptyMatrix } from '../utils/arrayUtils'
 import { getRange } from '../utils/numUtils'
-import { getTextWidth } from '../utils/textUtils'
+import { copyText, getTextWidth } from '../utils/textUtils'
+import { matrixToSpreadsheet, getEmptyMatrix } from '../utils/arrayUtils'
+
+import useContextMenu from '../customHooks/useContextMenu'
 
 const rowHeight = 52
 const columnWidth = 150
@@ -484,6 +486,37 @@ const Table = ({
     coords[1] = selector
     setSelected({ type, coords })
   }, [selected])
+
+  const copySelected = useCallback(() => {
+    if (!selected.type) return
+    
+    const { type, coords } = selected
+    const getIndexes = arr => arr.map(n => n - 1).sort((a,b) => a - b)
+    const rows = getIndexes(getRange(type === "cell" ? coords.map(co => co[1]) : type === "row" ? coords : [1, columnCount]))
+    const cols = getIndexes(getRange(type === "cell" ? coords.map(co => co[0]) : type === "column" ? coords : [1, rowCount]))
+  
+    const matrix = getEmptyMatrix(rows.length, cols.length)
+    matrix.forEach((row, rowIndex) => row.forEach((_, colIndex) => {
+      matrix[rowIndex][colIndex] = items[rows[rowIndex]][cols[colIndex]]
+    }))
+  
+    const content = matrixToSpreadsheet(matrix)
+    copyText(content)
+  }, [ selected, items, rowCount, columnCount ])
+  
+  useEffect(() => {
+    const handleKeyDown = e => {
+      const { key, metaKey, shiftKey } = e
+      if (key === "c" && metaKey && !shiftKey) {
+        e.preventDefault()
+        copySelected()
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown)
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [ copySelected ])
 
   return (
     <TableContainer ref={ measuredTable } {...{style}}>
