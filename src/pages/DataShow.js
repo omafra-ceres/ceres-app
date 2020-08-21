@@ -331,16 +331,22 @@ const DataShow = ({ location: { pathname }}) => {
   const tableHeaders = useMemo(() => {
     if (!schema) return
     const keys = Object.keys(schema.properties)
-    return keys.map(key => ({ id: key, ...schema.properties[key] }))
+    return keys.map(key => ({
+      id: key,
+      required: schema.required.includes(key),
+      ...schema.properties[key]
+    }))
   }, [schema])
 
   const tableItems = useMemo(() => {
     if (!tableHeaders || !items) return
     const itemArr = []
     items.forEach(item => {
+      const rowArr = []
       tableHeaders.forEach(header => {
-        itemArr.push(item[header.id])
+        rowArr.push(item[header.id])
       })
+      itemArr.push(rowArr)
     })
     return itemArr
   }, [items, tableHeaders])
@@ -505,8 +511,6 @@ const DataShow = ({ location: { pathname }}) => {
         <NewTable
           headers={ tableHeaders }
           items={ tableItems }
-          columnCount={ tableHeaders.length }
-          rowCount={ items.length }
           style={{
             borderTop: "2px solid #ddd",
             flexGrow: "1",

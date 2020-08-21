@@ -3,6 +3,7 @@ import styled from 'styled-components'
 
 import useScrollLock from '../customHooks/useScrollLock'
 
+import { getEmptyMatrix } from '../utils/arrayUtils'
 import { getRange } from '../utils/numUtils'
 import { getTextWidth } from '../utils/textUtils'
 
@@ -60,9 +61,13 @@ const RownumDisplay = styled(TableDisplay).attrs(() => ({
   overflow-y: hidden;
 `
 
-const Cell = styled.div.attrs(() => ({
+const Cell = styled.div.attrs(p => ({
+  "data-celltype": "cell",
   style: {
-    height: rowHeight
+    gridColumn: p.column,
+    MsGridColumn: p.column,
+    gridRow: p.row,
+    MsGridRow: p.row,
   }
 }))`
   border: 1px solid #fff;
@@ -78,11 +83,6 @@ const Cell = styled.div.attrs(() => ({
     background: #fafafa;
   }
 
-  &.data-invalid {
-    outline: 2px solid red;
-    color: red;
-  }
-
   &.format-number {
     font-family: 'Roboto Condensed', sans-serif;
     text-align: right;
@@ -92,9 +92,16 @@ const Cell = styled.div.attrs(() => ({
     text-transform: uppercase;
     text-align: center;
   }
+
+  &.selected {
+    background: #555;
+    color: white;
+  }
 `
 
-const Header = styled(Cell)`
+const Header = styled(Cell).attrs(() => ({
+  "data-celltype": "column",
+}))`
   background: #f7f8f9;
   border-top: none;
   font-weight: bold;
@@ -113,10 +120,7 @@ const Header = styled(Cell)`
 `
 
 const Rownum = styled(Cell).attrs(() => ({
-  style: {
-    height: rowHeight,
-    width: rowHeight
-  }
+  "data-celltype": "row",
 }))`
   background: #f7f8f9;
   border-left: none;
@@ -130,11 +134,184 @@ const Rownum = styled(Cell).attrs(() => ({
   }
 `
 
+const ControlWrap = styled.div`
+  overflow: hidden;
+  position: absolute;
+`
+
+const ControlContainer = styled.div`
+  overflow: scroll;
+  position: absolute;
+  top: 0;
+  left: 0;
+`
+
+const Selection = styled.div`
+  background: #0e65eb11;
+  border: 1px solid #0e65eb;
+  position: absolute;
+  top: -2px;
+  left: -2px;
+
+  &.highlight {
+    background: #aaa4;
+    border: none;
+  }
+
+  &.bulk-selector {
+    background: transparent;
+    border: none;
+  }
+`
+
 //////                            //////
 //////      Component Styles      //////
 //////                            //////
 ////////////////////////////////////////
 
+const TableControl = forwardRef(({ position, containerSize, contentSize, selection, onClick, onScroll, hideScroll=true }, ref) => {
+  const modX = hideScroll[0] ? 30 : 0
+  const modY = hideScroll[1] ? 30 : 0
+  return (
+    <ControlWrap style={{
+      left: (position.left || 0) + "px",
+      top: (position.top || 0) + "px",
+      height: containerSize.height + "px",
+      width: containerSize.width + "px"
+    }}>
+      <ControlContainer
+        {...{ ref, onScroll }}
+        onMouseDown={ onClick }
+        style={{
+          height: containerSize.height + modX + "px",
+          width: containerSize.width + modY + "px"
+        }}
+      >
+        <div style={{
+          height: (contentSize.height || containerSize.height - modX) + modX + "px",
+          width: contentSize.width + modY + "px"
+        }} />
+        <Selection { ...selection } />
+      </ControlContainer>
+    </ControlWrap>
+  )
+})
+
+const Control = ({
+  tableSize,
+  columnWidths,
+  rowCount,
+  onClick,
+  selected,
+  addScroller,
+  handleScroll
+}) => {
+  const contentHeight = rowCount * rowHeight
+  const contentWidth = columnWidths.reduce((acc, cur) => acc + cur)
+  
+  const headerProps = {
+    position: { left: rownumWidth },
+    containerSize: {
+      height: rowHeight,
+      width: tableSize.width - rownumWidth
+    },
+    contentSize: { width: contentWidth },
+    hideScroll: [true, false]
+  }
+  
+  const rownumProps = {
+    position: { top: rowHeight },
+    containerSize: {
+      height: tableSize.height - rowHeight,
+      width: rownumWidth
+    },
+    contentSize: { height: contentHeight },
+    hideScroll: [false, true]
+  }
+
+  const tableProps = {
+    position: {
+      top: rowHeight,
+      left: rownumWidth
+    },
+    containerSize: {
+      height: tableSize.height - rowHeight,
+      width: tableSize.width - rownumWidth
+    },
+    contentSize: {
+      height: contentHeight,
+      width: contentWidth
+    },
+    hideScroll: [false, false]
+  }
+
+  const getBounds = useCallback((colBounds, rowBounds) => {
+    const left = columnWidths.slice(0, colBounds[0] - 1).reduce((acc, cur) => acc + cur, 0) + "px"
+    const top = ((rowBounds[0] - 1) * rowHeight) + "px"
+    const width = columnWidths.slice(colBounds[0] - 1, colBounds[1]).reduce((acc, cur) => acc + cur, 0) + "px"
+    const height = (rowHeight * (rowBounds[1] - rowBounds[0] + 1)) + "px"
+    return { left, top, width, height }
+  }, [columnWidths])
+
+  let colSelection, rowSelection, cellSelection
+  if (selected.coords) {
+    const [start, end] = selected.coords
+    let colHighlight, rowHighlight, colBounds, rowBounds
+    switch (selected.type) {
+      case "cell":
+        colBounds = [start[0], end[0]].sort((a, b) => a - b)
+        rowBounds = [start[1], end[1]].sort((a, b) => a - b)
+        colHighlight = true
+        rowHighlight = true
+        break
+      case "row":
+        colBounds = [1, columnWidths.length]
+        rowBounds = [start, end].sort((a, b) => a - b)
+        colHighlight = true
+        break
+      case "column":
+        colBounds = [start, end].sort((a, b) => a - b)
+        rowBounds = [1, rowCount]
+        rowHighlight = true
+        break
+      default:
+        break
+    }
+    const bounds = getBounds(colBounds, rowBounds)
+    colSelection = {
+      className: colHighlight ? "highlight" : "bulk-selector",
+      style: {...bounds, top: "0px", height: rowHeight + "px"}
+    }
+    rowSelection = {
+      className: rowHighlight ? "highlight" : "bulk-selector",
+      style: {...bounds, left: "0px", width: rownumWidth + "px"}
+    }
+    cellSelection = { style: bounds }
+  }
+
+  return (
+    <>
+      <TableControl
+        ref={ addScroller("control-header") }
+        onScroll={ handleScroll() }
+        selection={ colSelection }
+        {...{ onClick, ...headerProps }}
+      />
+      <TableControl
+        ref={ addScroller("control-rownum") }
+        onScroll={ handleScroll() }
+        selection={ rowSelection }
+        {...{ onClick, ...rownumProps }}
+      />
+      <TableControl
+        ref={ addScroller("control-table") }
+        onScroll={ handleScroll() }
+        selection={ cellSelection }
+        {...{ onClick, ...tableProps }}
+      />
+    </>
+  )
+}
 
 const getCellValue = value => {
   if (value == null) return ""
@@ -151,38 +328,51 @@ const getCellValue = value => {
   }
 }
 
-const getCellClass = (value, columnType, index) => {
+const getCellClass = (value, rowIndex) => {
   const valType = typeof value
-  const isValid = valType === columnType
-  const isEven = index % 2
-
-  const classlist = []
-  classlist.push(`format-${valType}`, isEven ? "row-even" : "row-odd")
-  if (!isValid) classlist.push("data-invalid")
+  const isEven = rowIndex % 2
+  const classlist = [`format-${valType}`, isEven ? "row-even" : "row-odd"]
   if (valType === "boolean" && value) classlist.push("data-true")
   return classlist.join(" ")
 }
 
-const ColumnHeaders = forwardRef(({ headers, columnWidth, width, columnTemplates }, ref) => (
-  <HeaderDisplay
-    ref={ ref }
-    columns={ columnTemplates }
-    rows={ 1 }
-    width={ width }
-  >
-    { headers.map((header, i) => (
-      <Header
-        key={ i }
-        width={ columnWidth(i) }
-        className={ `format-${header.type}` }
-      >
-        { header.title }
-      </Header>
-    )) }
-  </HeaderDisplay>
-))
+const ColumnHeaders = forwardRef(({
+  headers,
+  columnCount,
+  columnWidth,
+  width,
+  selected,
+  columnTemplates
+}, ref) => {
+  const selectedCols = selected.type === "column" ? getRange(selected.coords) : []
+  const getClass = useCallback(colIndex => {
+    const classlist = []
+    classlist.push(`format-${(headers[colIndex] || []).type}`)
+    if (selectedCols.includes(colIndex + 1)) classlist.push("selected")
+    return classlist.join(" ")
+  }, [headers, selectedCols])
+  return (
+    <HeaderDisplay
+      ref={ ref }
+      columns={ columnTemplates }
+      rows={ 1 }
+      width={ width }
+    >
+      { getRange([0, columnCount], false).map((colIndex) => (
+        <Header
+          key={ colIndex }
+          width={ columnWidth(colIndex) }
+          data-cellselector={ colIndex + 1 }
+          className={ getClass(colIndex) }
+        >
+          { (headers[colIndex] || []).title }
+        </Header>
+      )) }
+    </HeaderDisplay>
+  )
+})
 
-const Rownums = forwardRef(({ rowCount, height }, ref) => (
+const Rownums = forwardRef(({ rowCount, height, selected }, ref) => (
   <RownumDisplay
     ref={ ref }
     columns={ `${ rownumWidth }px` }
@@ -193,6 +383,8 @@ const Rownums = forwardRef(({ rowCount, height }, ref) => (
       <Rownum
         key={ num }
         width={ rownumWidth }
+        data-cellselector={ num }
+        className={ selected.type === "row" ? getRange(selected.coords).includes(num) ? "selected" : "" : "" }
       >
         { num }
       </Rownum>
@@ -206,7 +398,6 @@ const TableCells = forwardRef(({
   columnCount,
   columnTemplates,
   columnWidth,
-  columnType,
   height,
   width,
   onScroll
@@ -218,29 +409,39 @@ const TableCells = forwardRef(({
     onScroll={ onScroll }
     height={ height }
     width={ width }
-  >
-    { items.map((item, i) => (
-      <Cell
-        key={ i }
-        width={ columnWidth(i % columnCount) }
-        className={ getCellClass(item, columnType(i % columnCount), Math.trunc(i / columnCount)) }
-      >
-        { getCellValue(item) }
-      </Cell>
-    )) }
-  </TableDisplay>
+  >{
+    getEmptyMatrix(rowCount, columnCount)
+      .map((row, rowIndex) => row.map((_,colIndex) => (
+        <Cell
+          key={ `${rowIndex + 1} / ${colIndex + 1}` }
+          row={ rowIndex + 1 }
+          column={ colIndex + 1 }
+          width={ columnWidth(colIndex) }
+          data-cellselector={ `${colIndex + 1}/${rowIndex + 1}` }
+          className={ getCellClass((items[rowIndex] || [])[colIndex], rowIndex) }
+        >
+          { getCellValue((items[rowIndex] || [])[colIndex]) }
+        </Cell>
+      )))
+  }</TableDisplay>
 ))
 
 const Table = ({
   headers,
   items,
-  columnCount,
-  rowCount,
+  defaultColumnCount=20,
+  defaultRowCount=50,
   style={}
 }) => {
-  const [addScroller, handleScroll] = useScrollLock()
+  const [ selected, setSelected ] = useState({})
+  const [ addScroller, handleScroll ] = useScrollLock()
   const [ tableSize, setTableSize ] = useState({ width: 0, height: 0 })
   const tableRef = useRef()
+
+  const [columnCount, rowCount] = useMemo(() => ([
+    Math.max(headers.length, defaultColumnCount),
+    Math.max(items.length, defaultRowCount)
+  ]), [defaultColumnCount, defaultRowCount, headers, items])
 
   const measuredTable = useCallback(node => {
     if (node !== null) {
@@ -253,14 +454,14 @@ const Table = ({
   const columnWidths = useMemo(() => {
     const widths = getRange([0, columnCount], false).fill(columnWidth - cellBorder - cellPadding)
     headers.forEach(({title: header}, i) => {
-      const headerWidth = getTextWidth(header, "bold 16px Roboto, sans-serif")
-      if (headerWidth > widths[i]) widths[i] = headerWidth
-    })
-    items.forEach((item, i) => {
-      const value = getCellValue(item)
-      const font = `normal 16px Roboto${typeof value === "number" ? " Condensed" : ""}, sans-serif`
-      let itemWidth = getTextWidth(value, font)
-      if (itemWidth > widths[i % columnCount]) widths[i % columnCount] = itemWidth
+      let width = getTextWidth(header, "bold 16px Roboto, sans-serif")
+      items.forEach(row => {
+        const item = getCellValue(row[i])
+        const font = `normal 16px Roboto${typeof item === "number" ? " Condensed" : ""}, sans-serif`
+        const itemWidth = getTextWidth(item, font)
+        if (itemWidth > width) width = itemWidth
+      })
+      if (width > widths[i]) widths[i] = width
     })
     return widths.map(width => width + cellPadding + cellBorder)
   }, [headers, items, columnCount])
@@ -271,18 +472,34 @@ const Table = ({
       .join("px ") + "px"
   ), [columnCount, columnWidths])
 
+  const handleClick = useCallback(e => {
+    const { pageX, pageY, shiftKey } = e
+    const cell = document.elementsFromPoint(pageX, pageY).find(el => el.dataset.celltype)
+    const { celltype: type, cellselector } = cell.dataset
+    const selector = type === "cell"
+      ? cellselector.split("/").map(num => parseInt(num, 10))
+      : parseInt(cellselector, 10)
+    let { coords } = selected
+    if (!coords || !shiftKey) coords = [selector, selector]
+    coords[1] = selector
+    setSelected({ type, coords })
+  }, [selected])
+
   return (
     <TableContainer ref={ measuredTable } {...{style}}>
       <ColumnHeaders
         ref={ addScroller("header", "x") }
         headers={ headers }
+        columnCount={ columnCount }
         columnTemplates={ columnTemplates }
         columnWidth={ index => columnWidths[index] }
+        selected={ selected }
         width={ tableSize.width - rownumWidth }
       />
       <Rownums
         ref={ addScroller("rownum", "y") }
         height={tableSize.height - rowHeight}
+        selected={ selected }
         rowCount={ rowCount }
       />
       <TableCells
@@ -295,7 +512,15 @@ const Table = ({
         columnCount={ columnCount }
         columnTemplates={ columnTemplates }
         columnWidth={ col => columnWidths[col] }
-        columnType={ col => headers[col].type }
+      />
+      <Control
+        onClick={ handleClick }
+        addScroller={ addScroller }
+        handleScroll={ handleScroll }
+        tableSize={ tableSize }
+        columnWidths={ columnWidths }
+        rowCount={ rowCount }
+        selected={ selected }
       />
     </TableContainer>
   )
