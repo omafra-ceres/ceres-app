@@ -3,9 +3,14 @@ import styled from 'styled-components'
 
 import useScrollLock from '../customHooks/useScrollLock'
 
-import { getRange } from '../utils/numUtils'
-import { copyText, getTextWidth } from '../utils/textUtils'
-import { matrixToSpreadsheet, getEmptyMatrix } from '../utils/arrayUtils'
+// import { copyText, getTextWidth } from '../utils/textUtils'
+import {
+  matrixToSpreadsheet,
+  getEmptyMatrix,
+  getRange,
+  copyText,
+  getTextWidth
+} from '../utils'
 
 import useContextMenu from '../customHooks/useContextMenu'
 
@@ -148,7 +153,9 @@ const ControlContainer = styled.div`
   left: 0;
 `
 
-const Selection = styled.div`
+const Selection = styled.div.attrs(() => ({
+  "data-selection": true
+}))`
   background: #0e65eb11;
   border: 1px solid #0e65eb;
   position: absolute;
@@ -282,13 +289,21 @@ const Control = ({
     const bounds = getBounds(colBounds, rowBounds)
     colSelection = {
       className: colHighlight ? "highlight" : "bulk-selector",
-      style: {...bounds, top: "0px", height: rowHeight + "px"}
+      style: {...bounds, top: "0px", height: rowHeight + "px"},
+      "data-contextmenu": "columnselection",
+      "data-contextdata": `${colBounds[0]}-${colBounds[1]}/${rowBounds[0]}-${rowBounds[1]}`
     }
     rowSelection = {
       className: rowHighlight ? "highlight" : "bulk-selector",
-      style: {...bounds, left: "0px", width: rownumWidth + "px"}
+      style: {...bounds, left: "0px", width: rownumWidth + "px"},
+      "data-contextmenu": "rowselection",
+      "data-contextdata": `${colBounds[0]}-${colBounds[1]}/${rowBounds[0]}-${rowBounds[1]}`
     }
-    cellSelection = { style: bounds }
+    cellSelection = {
+      style: bounds,
+      "data-contextmenu": "cellselection",
+      "data-contextdata": `${colBounds[0]}-${colBounds[1]}/${rowBounds[0]}-${rowBounds[1]}`
+    }
   }
 
   return (
@@ -366,6 +381,8 @@ const ColumnHeaders = forwardRef(({
           width={ columnWidth(colIndex) }
           data-cellselector={ colIndex + 1 }
           className={ getClass(colIndex) }
+          // data-contextmenu="header"
+          // data-contextdata={ colIndex + 1 }
         >
           { (headers[colIndex] || []).title }
         </Header>
@@ -387,6 +404,8 @@ const Rownums = forwardRef(({ rowCount, height, selected }, ref) => (
         width={ rownumWidth }
         data-cellselector={ num }
         className={ selected.type === "row" ? getRange(selected.coords).includes(num) ? "selected" : "" : "" }
+        // data-contextmenu="rownum"
+        // data-contextdata={ num }
       >
         { num }
       </Rownum>
@@ -421,6 +440,8 @@ const TableCells = forwardRef(({
           width={ columnWidth(colIndex) }
           data-cellselector={ `${colIndex + 1}/${rowIndex + 1}` }
           className={ getCellClass((items[rowIndex] || [])[colIndex], rowIndex) }
+          // data-contextmenu="tablecell"
+          // data-contextdata={ `${colIndex + 1}/${rowIndex + 1}` }
         >
           { getCellValue((items[rowIndex] || [])[colIndex]) }
         </Cell>
@@ -475,6 +496,8 @@ const Table = ({
   ), [columnCount, columnWidths])
 
   const handleClick = useCallback(e => {
+    if (e.target.dataset.selection && e.button === 2 && !e.target.className.split(" ").includes("highlight")) return
+    
     const { pageX, pageY, shiftKey } = e
     const cell = document.elementsFromPoint(pageX, pageY).find(el => el.dataset.celltype)
     const { celltype: type, cellselector } = cell.dataset
@@ -517,6 +540,44 @@ const Table = ({
       document.removeEventListener("keydown", handleKeyDown)
     }
   }, [ copySelected ])
+
+  const menuOptions = useMemo(() => {
+    const getSelectedString = (data, type) => {
+      const [cols, rows] = data.split("/").map(s=>s.split("-").map(n=>parseInt(n,10)).sort((a,b)=>a-b))
+      const isSame = (a, b) => a === b
+      const strings = {
+        row: `row${isSame(...rows) ? "" : `s ${rows.join(" - ")}`}`,
+        column: `column${isSame(...cols) ? "" : `s ${cols.join(" - ")}`}`
+      }
+      return strings[type]
+    }
+    return {
+      cellselection: {
+        options: [
+          { label: "Copy selection", action: copySelected },
+          "break",
+          { label: data => `Delete ${getSelectedString(data, "row")}`, disabled: true },
+          { label: data => `Delete ${getSelectedString(data, "column")}`, disabled: true },
+        ]
+      },
+      columnselection: {
+        options: [
+          { label: data => `Copy ${getSelectedString(data, "column")}`, action: copySelected },
+          "break",
+          { label: data => `Delete ${getSelectedString(data, "column")}`, disabled: true },
+        ]
+      },
+      rowselection: {
+        options: [
+          { label: data => `Copy ${getSelectedString(data, "row")}`, action: copySelected },
+          "break",
+          { label: data => `Delete ${getSelectedString(data, "row")}`, disabled: true },
+        ]
+      },
+    }
+  }, [ copySelected ])
+
+  useContextMenu(menuOptions)
 
   return (
     <TableContainer ref={ measuredTable } {...{style}}>

@@ -2,9 +2,8 @@ import React, { useCallback, useMemo, forwardRef, useRef, useState, useEffect } 
 import styled from 'styled-components'
 import { VariableSizeGrid as Grid } from 'react-window'
 
-import { getRange } from '../utils/numUtils'
 import { copyText, getTextWidth } from '../utils/textUtils'
-import { matrixToSpreadsheet, getEmptyMatrix } from '../utils/arrayUtils'
+import { matrixToSpreadsheet, getEmptyMatrix, getRange } from '../utils/arrayUtils'
 
 import useContextMenu from '../customHooks/useContextMenu'
 

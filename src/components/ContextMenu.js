@@ -1,21 +1,23 @@
-////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////
-//////                                                    //////
-//////    This component should only be used in App.js    //////
-//////    All other files should use useMenu to update    //////
-//////                                                    //////
-////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
+//////                                                           //////
+//////    This component should only be used in App.js           //////
+//////    All other files should use useContextMenu to update    //////
+//////                                                           //////
+///////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////
 
 import React, { useState, useEffect, useRef } from "react"
 import styled from "styled-components"
 
 import useContextMenu from "../customHooks/useContextMenu"
 
-const menuWidth = 150
+import { callIfFunction } from "../utils"
+
+const menuWidth = 175
 const menuItemHeight = 30
 
-const HeaderActionsMenu = styled.ul.attrs(p => {
+const ActionsMenu = styled.ul.attrs(p => {
   const [x, y] = (p.position || [0, 0])
   return {
     style: {
@@ -45,7 +47,7 @@ const ActionMenuItem = styled.button.attrs(() => ({
   border: none;
   display: block;
   line-height: 30px;
-  padding: 0 10px;
+  padding: 0 10px 0 30px;
   text-align: left;
   width: 100%;
 
@@ -55,6 +57,15 @@ const ActionMenuItem = styled.button.attrs(() => ({
   }
 `
 
+const MenuBreak = styled.div.attrs(() => ({
+  "aria-disabled": "true",
+  role: "separator"
+}))`
+  border-top: 1px solid #ddd;
+  margin: 8px 0 8px 30px;
+  user-select: none;
+`
+
 const defaultState = {
   isOpen: false,
   position: [0, 0],
@@ -62,7 +73,7 @@ const defaultState = {
 }
 
 const MenuActionItem = ({ option }) =>(
-  <li>
+  <li {...option.disabled && {"aria-disabled": option.disabled}}>
     <ActionMenuItem
       disabled={ option.disabled }
       onClick={ option.action }
@@ -91,8 +102,11 @@ const ContextMenu = () => {
         const { options, onOpen } = menus[menu]
 
         const opAction = (op) => () => { closeMenu(); op.action(data) }
-        const opDisabled = (op) => op.disabled && op.disabled(data)
-        const ops = options.map(op => ({ ...op, action: opAction(op), disabled: opDisabled(op) }))
+        const ops = options.map(op => op === "break" ? op : ({
+          label: callIfFunction(op.label, data),
+          action: opAction(op),
+          disabled: callIfFunction(op.disabled, data)
+        }))
         
         const { innerWidth: width, innerHeight: height } = window
         const minX = width - menuWidth
@@ -131,8 +145,8 @@ const ContextMenu = () => {
     if (!["Tab", "ArrowDown", "ArrowUp"].includes(e.key)) return
 
     const children = Array.from(e.currentTarget.children)
+      .filter(ch => ch.tagName === "LI" && !ch.attributes["aria-disabled"])
       .map(ch => ch.firstChild)
-      .filter(ch => !ch.attributes.disabled)
     const first = children[0]
     const last = children[children.length - 1]
     
@@ -166,16 +180,18 @@ const ContextMenu = () => {
   }
 
   return (
-    <HeaderActionsMenu
+    <ActionsMenu
       {...menuState}
       ref={ menuContainer }
       onKeyDown={ handleMenuKeyDown }
       onBlur={ handleMenuBlur }
     >
-      { (menuState.options || []).map((op, i) => (
+      { (menuState.options || []).map((op, i) => op === "break" ? (
+        <MenuBreak key={ i } />
+      ) : (
         <MenuActionItem key={ i } option={ op } close={ closeMenu } />
       )) }
-    </HeaderActionsMenu>
+    </ActionsMenu>
   )
 }
 

@@ -59,7 +59,7 @@ const ActionContainer = styled.div`
     background: none;
     padding: 10px 16px;
 
-    &:hover {
+    &:hover:not(:disabled) {
       background: #efefef;
     }
   }
@@ -480,6 +480,7 @@ const DataShow = ({ location: { pathname }}) => {
         <button
           key={ i }
           onClick={ action.action }
+          disabled={ action.disabled }
         >
           { action.label }
         </button>
@@ -493,7 +494,8 @@ const DataShow = ({ location: { pathname }}) => {
       <DescriptionContainer>{ details.description }</DescriptionContainer>
       <ActionBar actions={[
         { label: "Add Item", action: addItemAction },
-        { label: "Edit Details", action: editDetailsAction }
+        { label: "Edit Details", action: editDetailsAction },
+        { label: "Edit Template", disabled: true },
       ]} />
       { tableHeaders && tableItems ? (
         // <Table
@@ -511,6 +513,9 @@ const DataShow = ({ location: { pathname }}) => {
         <NewTable
           headers={ tableHeaders }
           items={ tableItems }
+          permissions={ permissions }
+          editHeaderAction={ editHeaderAction }
+          deleteHeaderAction={ deleteHeaderAction }
           style={{
             borderTop: "2px solid #ddd",
             flexGrow: "1",
