@@ -3,7 +3,6 @@ import styled from 'styled-components'
 import axios from 'axios'
 
 import Table from '../components/Table'
-import NewTable from '../components/NewTable'
 import Form from '../components/CustomForm'
 import Button from '../components/Button'
 
@@ -63,52 +62,6 @@ const ActionContainer = styled.div`
       background: #efefef;
     }
   }
-`
-
-const DeleteText = styled.div`
-  color: #666;
-  font-size: 14px;
-  margin-bottom: 25px;
-  width: 350px;
-  text-align: center;
-
-  h1 {
-    color: #444;
-    font-weight: bold;
-    margin-bottom: 20px;
-  }
-
-  p {
-    margin: 5px 0;
-  }
-`
-
-const DeleteForm = styled(StyledForm)`
-  margin: 0 auto;
-  max-width: 250px;
-  min-width: unset;
-
-  input {
-    margin-bottom: 5px;
-  }
-`
-
-const CancelDeleteButton = styled(Button).attrs({
-  buttonType: "fill"
-})`
-  border-color: #aaa;
-  background-color: #aaa;
-  color: white;
-`
-
-const DeleteButton = styled(Button).attrs({
-  buttonType: "fill",
-  type: "submit"
-})`
-  border-color: red;
-  background-color: red;
-  color: white;
-  margin-left: 20px;
 `
 
 //////                            //////
@@ -212,118 +165,6 @@ const EditDetailsForm = ({ pathname, onSubmit, closeModal, details }) => {
   )
 }
 
-const EditHeaderForm = ({ pathname, onSubmit, closeModal, header, editType }) => {
-  const { id, label: title, dataType: type } = header
-  const [ newHeader, setNewHeader ] = useState({ title, type })
-  const formEl = useRef()
-
-  useEffect(() => {
-    setNewHeader({ title, type })
-    formEl.current.formElement[0].focus()
-  }, [ title, type ])
-  
-  const handleSubmit = () => {
-    axios.post(`http://localhost:4000/data/${pathname.slice(1)}/update`, {
-      type: "schema",
-      schema: {
-        [id]: newHeader
-      }
-    }).then(() => {
-      onSubmit({ ...newHeader, id })
-    }).catch(err => {
-      console.error(err)
-    })
-  }
-
-  const handleChange = ({formData}) => {
-    setNewHeader({
-      ...newHeader,
-      [editType]: formData
-    })
-  }
-
-  const nameSchema = {
-    title: "Field Name",
-    type: "string"
-  }
-
-  const typeSchema = {
-    title: "Field Type",
-    type: "string",
-    enum: ["string", "number", "boolean"],
-    enumNames: ["Text", "Number", "True/False"]
-  }
-
-  const schema = {
-    title: nameSchema,
-    type: typeSchema
-  }
-
-  return (
-    <StyledForm
-      formData={ newHeader[editType] }
-      schema={ schema[editType] }
-      onSubmit={ handleSubmit }
-      onChange={ handleChange }
-      ref={ formEl }
-    >
-      <FormToolbar>
-        <Button buttonType="fill" type="submit">Submit</Button>
-        <Button buttonType="text" onClick={ closeModal }>Cancel</Button>
-      </FormToolbar>
-    </StyledForm>
-  )
-}
-
-const DeleteHeaderForm = ({closeModal, onSubmit, pathname, id, title}) => {
-  const [ titleCheck, setTitleCheck ] = useState()
-
-  useEffect(() => {
-    setTitleCheck()
-  }, [title])
-  
-  const handleChange = ({ formData }) => {
-    setTitleCheck(formData)
-  }
-
-  const validate = (formData, errors) => {
-    if (formData.delete !== title) {
-      errors.delete.addError("Field names do not match")
-    }
-    return errors
-  }
-
-  return (
-    <>
-      <DeleteText>
-        <h1>Are you sure?</h1>
-        <p>Deleting field <b>{ title }</b> cannot be undone.</p>
-        <p>Type the field name below to confirm.</p>
-      </DeleteText>
-      <DeleteForm
-        formData={ titleCheck }
-        schema={{
-          required: [ "delete" ],
-          properties: {
-            delete: {
-              title: "Field Name",
-              type: "string"
-            }
-          }
-        }}
-        validate={ validate }
-        onSubmit={ () => onSubmit(id) }
-        onChange={ handleChange }
-      >
-        <FormToolbar style={{ justifyContent: "center", marginTop: "20px" }}>
-          <CancelDeleteButton onClick={ closeModal }>Cancel</CancelDeleteButton>
-          <DeleteButton>Delete</DeleteButton>
-        </FormToolbar>
-      </DeleteForm>
-    </>
-  )
-}
-
 const DataShow = ({ location: { pathname }}) => {
   const [{details, schema}, setDataStructure] = useState({})
   const [items, setItems] = useState()
@@ -353,16 +194,8 @@ const DataShow = ({ location: { pathname }}) => {
   
   const modalActions = useModal({
     addItem: AddItemForm,
-    editDetails: EditDetailsForm,
-    editHeader: EditHeaderForm,
-    deleteHeader: DeleteHeaderForm
+    editDetails: EditDetailsForm
   })[1]
-  
-  const permissions = useMemo(() => ({
-    title: true,
-    type: !(items || []).length,
-    delete: !(items || []).length
-  }), [items])
   
   useEffect(() => {
     axios.get(`http://localhost:4000/data/${pathname.slice(1)}`)
@@ -407,73 +240,6 @@ const DataShow = ({ location: { pathname }}) => {
     modalActions.open("editDetails", data)
   }
 
-  const headerSubmit = useCallback((newHeader) => {
-    const { id, title, type } = newHeader
-    modalActions.close()
-    const newDataStructure = {
-      details,
-      schema: {
-        ...schema,
-        properties: {
-          ...schema.properties,
-          [id]: {
-            ...schema.properties[id],
-            title,
-            type
-          }
-        }
-      }
-    }
-    setDataStructure(newDataStructure)
-  }, [ details, modalActions, schema ])
-
-  const editHeaderAction = (header, editType) => {
-    const data = {
-      closeModal: () => modalActions.close(),
-      onSubmit: headerSubmit,
-      pathname,
-      header,
-      editType
-    }
-    modalActions.open("editHeader", data)
-  }
-  
-  const headerDelete = useCallback(id => {
-    modalActions.close()
-    if (items && items.length) return
-
-    axios.post(`http://localhost:4000/data/${pathname.slice(1)}/delete`, {
-      fields: [id]
-    }).then(() => {
-      const newProperties = Object.keys(schema.properties)
-        .filter(key => key !== id)
-        .reduce((acc, cur) => {
-          acc[cur] = {...schema.properties[cur]}
-          return acc
-        }, {})
-      const newDataStructure = {
-        details,
-        schema: {
-          ...schema,
-          properties: newProperties
-        }
-      }
-      setDataStructure(newDataStructure)
-    }).catch(console.error)
-  }, [ details, modalActions, schema, items, pathname ])
-
-  const deleteHeaderAction = id => {
-    const { title } = schema.properties[id]
-    const data = {
-      closeModal: () => modalActions.close(),
-      onSubmit: headerDelete,
-      pathname,
-      id,
-      title
-    }
-    modalActions.open("deleteHeader", data)
-  }
-
   const ActionBar = ({ actions }) => (
     <ActionContainer>
       { actions.map((action, i) => (
@@ -498,24 +264,9 @@ const DataShow = ({ location: { pathname }}) => {
         { label: "Edit Template", disabled: true },
       ]} />
       { tableHeaders && tableItems ? (
-        // <Table
-        //   schema={ schema }
-        //   items={ items }
-        //   permissions={ permissions }
-        //   editHeaderAction={ editHeaderAction }
-        //   deleteHeaderAction={ deleteHeaderAction }
-        //   style={{
-        //     borderTop: "2px solid #ddd",
-        //     flexGrow: "1",
-        //     maxWidth: "100%",
-        //   }}
-        // />
-        <NewTable
+        <Table
           headers={ tableHeaders }
           items={ tableItems }
-          permissions={ permissions }
-          editHeaderAction={ editHeaderAction }
-          deleteHeaderAction={ deleteHeaderAction }
           style={{
             borderTop: "2px solid #ddd",
             flexGrow: "1",
