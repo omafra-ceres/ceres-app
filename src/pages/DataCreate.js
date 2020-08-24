@@ -188,8 +188,8 @@ const transformErrors = errors => errors
     return err
   })
 
-const generateSchema = ({ details, fields }) => {
-  const schemaObject = {
+const generateTemplate = ({ details, fields }) => {
+  const templateObject = {
     title: details.name,
     type: "object",
     required: [],
@@ -198,14 +198,14 @@ const generateSchema = ({ details, fields }) => {
 
   fields.forEach(field => {
     const id = uuid()
-    if (field.required) schemaObject.required.push(id)
-    schemaObject.properties[id] = {
+    if (field.required) templateObject.required.push(id)
+    templateObject.properties[id] = {
       title: field.name,
       type: field.type
     }
   })
 
-  return schemaObject
+  return templateObject
 }
 
 const nameToPath = name => (
@@ -218,13 +218,15 @@ const nameToPath = name => (
 const DataCreate = () => {
   const [formData, setFormData] = React.useState(initialFormData)
 
-  const handleSubmit = ({formData}) => {
-    const schema = generateSchema(formData)
-    axios.post(`http://localhost:4000/data/create`, { details: formData.details, schema })
-      .then(() => {
-        window.location.pathname = `/${formData.details.path}`
-      })
-      .catch(err => console.error(err))
+  const handleSubmit = async ({formData}) => {
+    const { details } = formData
+    const template = generateTemplate(formData)
+    const created = await axios.post(`http://localhost:4000/data/create`, {
+      details,
+      template
+    }).catch(err => console.error(err))
+    
+    if (created.data.id) window.location.pathname = `/${created.data.id}`
   }
 
   const handleChange = ({formData}) => {

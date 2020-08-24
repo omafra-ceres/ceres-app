@@ -69,23 +69,23 @@ const ActionContainer = styled.div`
 //////                            //////
 ////////////////////////////////////////
 
-const AddItemForm = ({ schema={}, pathname, onSubmit, closeModal }) => {
+const AddItemForm = ({ template={}, datasetId, onSubmit, closeModal }) => {
   const [newItem, setNewItem] = useState({})
   const addItemFormEl = useRef()
 
   useEffect(() => {
-    if (!schema.properties) return
+    if (!template.properties) return
 
-    const booleanFields = Object.keys(schema.properties)
+    const booleanFields = Object.keys(template.properties)
       .filter(key => {
-        return schema.properties[key].type === "boolean"
+        return template.properties[key].type === "boolean"
       })
     setNewItem(booleanFields.reduce((obj, field) => ({...obj, [field]: false}), {}))
     addItemFormEl.current.formElement[0].focus()
-  }, [schema.properties])
+  }, [template.properties])
 
   const handleSubmit = ({formData}) => {
-    axios.post(`http://localhost:4000/data/${pathname.slice(1)}`, formData)
+    axios.post(`http://localhost:4000/data/${datasetId.slice(1)}`, formData)
       .then(res => {
         onSubmit(res.data.item)
       }).catch(console.error)
@@ -98,7 +98,7 @@ const AddItemForm = ({ schema={}, pathname, onSubmit, closeModal }) => {
   return (
     <StyledForm
       formData={ newItem }
-      schema={ schema }
+      schema={ template }
       onSubmit={ handleSubmit }
       onChange={ handleChange }
       uiSchema={{ "ui:title": "Add Item" }}
@@ -112,7 +112,7 @@ const AddItemForm = ({ schema={}, pathname, onSubmit, closeModal }) => {
   )
 }
 
-const EditDetailsForm = ({ pathname, onSubmit, closeModal, details }) => {
+const EditDetailsForm = ({ datasetId, onSubmit, closeModal, details }) => {
   const { name, description } = details
   const [newDetails, setNewDetails] = useState({name, description})
   const formEl = useRef()
@@ -122,10 +122,7 @@ const EditDetailsForm = ({ pathname, onSubmit, closeModal, details }) => {
   }, [])
 
   const handleSubmit = ({formData}) => {
-    axios.post(`http://localhost:4000/data/${pathname.slice(1)}/update`, {
-      type: "details",
-      details: formData
-    })
+    axios.post(`http://localhost:4000/data/${datasetId.slice(1)}/update`, formData)
       .then(() => {
         onSubmit(newDetails)
       }).catch(console.error)
@@ -165,19 +162,28 @@ const EditDetailsForm = ({ pathname, onSubmit, closeModal, details }) => {
   )
 }
 
-const DataShow = ({ location: { pathname }}) => {
-  const [{details, schema}, setDataStructure] = useState({})
+const DataShow = ({ location: { pathname: datasetId }}) => {
+  const [{details, template}, setDataset] = useState({})
   const [items, setItems] = useState()
 
+  useEffect(() => {
+    axios.get(`http://localhost:4000/data/${datasetId.slice(1)}`)
+      .then(res => {
+        const { details, items, template } = res.data
+        setDataset({ details, template })
+        setItems(items)
+      }).catch(console.error)
+  },[ datasetId ])
+
   const tableHeaders = useMemo(() => {
-    if (!schema) return
-    const keys = Object.keys(schema.properties)
+    if (!template) return
+    const keys = Object.keys(template.properties)
     return keys.map(key => ({
       id: key,
-      required: schema.required.includes(key),
-      ...schema.properties[key]
+      required: template.required.includes(key),
+      ...template.properties[key]
     }))
-  }, [schema])
+  }, [template])
 
   const tableItems = useMemo(() => {
     if (!tableHeaders || !items) return
@@ -185,7 +191,7 @@ const DataShow = ({ location: { pathname }}) => {
     items.forEach(item => {
       const rowArr = []
       tableHeaders.forEach(header => {
-        rowArr.push(item[header.id])
+        rowArr.push(item.data_values[header.id])
       })
       itemArr.push(rowArr)
     })
@@ -197,16 +203,6 @@ const DataShow = ({ location: { pathname }}) => {
     editDetails: EditDetailsForm
   })[1]
   
-  useEffect(() => {
-    axios.get(`http://localhost:4000/data/${pathname.slice(1)}`)
-      .then(res => {
-        const {items, dataStructure} = res.data
-        setDataStructure(dataStructure)
-        setItems(items)
-      })
-      .catch(console.error)
-  },[ pathname ])
-
   const itemSubmit = useCallback((newItem) => {
     setItems([...items, newItem])
     modalActions.close()
@@ -216,25 +212,28 @@ const DataShow = ({ location: { pathname }}) => {
     const data = {
       closeModal: () => modalActions.close(),
       onSubmit: itemSubmit,
-      schema,
-      pathname
+      template,
+      datasetId
     }
     modalActions.open("addItem", data)
   }
 
   const detailsSubmit = useCallback((newDetails) => {
     modalActions.close()
-    setDataStructure({schema, details: {
-      ...details,
-      ...newDetails
-    }})
-  }, [details, schema, modalActions])
+    setDataset({
+      template,
+      details: {
+        ...details,
+        ...newDetails
+      }
+    })
+  }, [details, modalActions, template])
   
   const editDetailsAction = () => {
     const data = {
       closeModal: () => modalActions.close(),
       onSubmit: detailsSubmit,
-      pathname,
+      datasetId,
       details
     }
     modalActions.open("editDetails", data)
