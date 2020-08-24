@@ -451,6 +451,7 @@ const TableCells = forwardRef(({
 const Table = ({
   headers,
   items,
+  deleteRows,
   defaultColumnCount=20,
   defaultRowCount=50,
   style={}
@@ -540,6 +541,11 @@ const Table = ({
     }
   }, [ copySelected ])
 
+  const deleteSelectedRows = useCallback(data => {
+    const rows = data.split("/")[1].split("-").map(n=>parseInt(n,10)).sort((a,b)=>a-b)
+    deleteRows(rows)
+  }, [ deleteRows ])
+
   const menuOptions = useMemo(() => {
     const getSelectedString = (data, type) => {
       const [cols, rows] = data.split("/").map(s=>s.split("-").map(n=>parseInt(n,10)).sort((a,b)=>a-b))
@@ -555,7 +561,7 @@ const Table = ({
         options: [
           { label: "Copy selection", action: copySelected },
           "break",
-          { label: data => `Delete ${getSelectedString(data, "row")}`, disabled: true },
+          { label: data => `Delete ${getSelectedString(data, "row")}`, action: deleteSelectedRows },
           { label: data => `Delete ${getSelectedString(data, "column")}`, disabled: true },
         ]
       },
@@ -570,16 +576,26 @@ const Table = ({
         options: [
           { label: data => `Copy ${getSelectedString(data, "row")}`, action: copySelected },
           "break",
-          { label: data => `Delete ${getSelectedString(data, "row")}`, disabled: true },
+          { label: data => `Delete ${getSelectedString(data, "row")}`, action: deleteSelectedRows },
         ]
       },
     }
-  }, [ copySelected ])
+  }, [ copySelected, deleteSelectedRows ])
 
   useContextMenu(menuOptions)
 
+  const handleTableClick = e => {
+    if (e.target === e.currentTarget) {
+      setSelected({ type: "row", coords: [1, rowCount] })
+    }
+  }
+
   return (
-    <TableContainer ref={ measuredTable } {...{style}}>
+    <TableContainer
+      ref={ measuredTable }
+      onClick={ handleTableClick }
+      {...{style}}
+    >
       <ColumnHeaders
         ref={ addScroller("header", "x") }
         headers={ headers }

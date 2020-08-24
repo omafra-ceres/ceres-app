@@ -7,6 +7,7 @@ import Form from '../components/CustomForm'
 import Button from '../components/Button'
 
 import useModal from '../customHooks/useModal'
+import { getRange } from '../utils'
 
 
 ////////////////////////////////////////
@@ -239,6 +240,14 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
     modalActions.open("editDetails", data)
   }
 
+  const deleteRows = ([start, end]) => {
+    const rows = getRange([start, end]).map(row => items[row - 1]._id)
+    axios.post(`http://localhost:4000/data/delete-items`, { items: rows })
+      .then(() => {
+        setItems(items.filter(item => !rows.includes(item._id)))
+      }).catch(console.error)
+  }
+
   const ActionBar = ({ actions }) => (
     <ActionContainer>
       { actions.map((action, i) => (
@@ -266,6 +275,7 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
         <Table
           headers={ tableHeaders }
           items={ tableItems }
+          deleteRows={ deleteRows }
           style={{
             borderTop: "2px solid #ddd",
             flexGrow: "1",
