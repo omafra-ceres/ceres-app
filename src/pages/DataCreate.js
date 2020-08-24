@@ -205,7 +205,7 @@ const DataCreate = () => {
   const handleSubmit = async ({formData}) => {
     const { details } = formData
     const template = generateTemplate(formData)
-    const created = await axios.post(`http://localhost:4000/data/create`, {
+    const created = await axios.post(`${process.env.REACT_APP_API_URL}/data/create`, {
       details,
       template
     }).catch(err => console.error(err))

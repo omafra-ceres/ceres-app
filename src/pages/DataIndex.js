@@ -227,7 +227,7 @@ const DataIndex = () => {
   }, [ menuState ])
 
   useEffect(() => {
-    axios.get(`http://localhost:4000/data`)
+    axios.get(`${process.env.REACT_APP_API_URL}/data`)
       .then(res => {
         setDataStructures(res.data)
       })
@@ -236,7 +236,7 @@ const DataIndex = () => {
 
   const handleDelete = (e, dataStructure) => {
     e.preventDefault()
-    axios.post("http://localhost:4000/data/delete", dataStructure)
+    axios.post(`${process.env.REACT_APP_API_URL}/data/delete`, dataStructure)
       .then(res => setDataStructures(res.data))
       .catch(console.error)
   }
@@ -302,13 +302,13 @@ const DataIndex = () => {
 
   const itemActions = {
     archive: () => {
-      axios.post("http://localhost:4000/data/archive", menuState.dataset)
+      axios.post(`${process.env.REACT_APP_API_URL}/data/archive`, menuState.dataset)
         .then(() => {
           setDataStructures(dataStructures.filter(set => set !== menuState.dataset))
         })
         .catch(console.error)
     }, unarchive: () => {
-      axios.post("http://localhost:4000/data/unarchive", menuState.dataset)
+      axios.post(`${process.env.REACT_APP_API_URL}/data/unarchive`, menuState.dataset)
         .then(() => {
           setDataStructures(dataStructures.filter(set => set !== menuState.dataset))
         })

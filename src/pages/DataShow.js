@@ -97,7 +97,7 @@ const AddItemForm = ({ template={}, datasetId, onSubmit, closeModal }) => {
   }, [template.properties])
 
   const handleSubmit = ({formData}) => {
-    axios.post(`http://localhost:4000/data/${datasetId.slice(1)}`, formData)
+    axios.post(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}`, formData)
       .then(res => {
         onSubmit(res.data.item)
       }).catch(console.error)
@@ -134,7 +134,7 @@ const EditDetailsForm = ({ datasetId, onSubmit, closeModal, details }) => {
   }, [])
 
   const handleSubmit = ({formData}) => {
-    axios.post(`http://localhost:4000/data/${datasetId.slice(1)}/update`, formData)
+    axios.post(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}/update`, formData)
       .then(() => {
         onSubmit(newDetails)
       }).catch(console.error)
@@ -202,7 +202,7 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
   const [items, setItems] = useState()
 
   useEffect(() => {
-    axios.get(`http://localhost:4000/data/${datasetId.slice(1)}`)
+    axios.get(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}`)
       .then(res => {
         const { details, items, template } = res.data
         setDataset({ details, template })
@@ -276,7 +276,7 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
   }
 
   const viewDeleted = async () => {
-    const deleted = await axios.get(`http://localhost:4000/data/${datasetId.slice(1)}/deleted`)
+    const deleted = await axios.get(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}/deleted`)
       .catch(console.error)
     modalActions.open("viewDeleted", {
       items: deleted.data.items,
@@ -286,7 +286,7 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
 
   const deleteRows = ([start, end]) => {
     const rows = getRange([start, end]).map(row => items[row - 1]._id)
-    axios.post(`http://localhost:4000/data/delete-items`, { items: rows })
+    axios.post(`${process.env.REACT_APP_API_URL}/data/delete-items`, { items: rows })
       .then(() => {
         setItems(items.filter(item => !rows.includes(item._id)))
       }).catch(console.error)
