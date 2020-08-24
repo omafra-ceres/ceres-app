@@ -65,6 +65,17 @@ const ActionContainer = styled.div`
   }
 `
 
+const TH = styled.th`
+  background: #333;
+  color: white;
+  padding: 2px 4px;
+`
+
+const TD = styled.td`
+  border: 1px solid #333;
+  padding: 2px 4px;
+`
+
 //////                            //////
 //////      Component Styles      //////
 //////                            //////
@@ -163,6 +174,29 @@ const EditDetailsForm = ({ datasetId, onSubmit, closeModal, details }) => {
   )
 }
 
+const ViewDeleted = ({ items, headers }) => (
+  <div>
+    <table>
+      <thead>
+        <tr>
+          { headers.map(header => <TH>{ header.title }</TH>) }
+          <th>Deleted On</th>
+        </tr>
+      </thead>
+      <tbody>
+        { items.map(item => (
+          <tr>
+            { headers.map(({ id }) => <TD>{ item.data_values[id] }</TD>) }
+            <td>{ new Date(item.deleted_on).toLocaleDateString(undefined, {
+              month: 'short', day: 'numeric', year: 'numeric'
+            }) }</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+)
+
 const DataShow = ({ location: { pathname: datasetId }}) => {
   const [{details, template}, setDataset] = useState({})
   const [items, setItems] = useState()
@@ -201,7 +235,8 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
   
   const modalActions = useModal({
     addItem: AddItemForm,
-    editDetails: EditDetailsForm
+    editDetails: EditDetailsForm,
+    viewDeleted: ViewDeleted
   })[1]
   
   const itemSubmit = useCallback((newItem) => {
@@ -240,6 +275,15 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
     modalActions.open("editDetails", data)
   }
 
+  const viewDeleted = async () => {
+    const deleted = await axios.get(`http://localhost:4000/data/${datasetId.slice(1)}/deleted`)
+      .catch(console.error)
+    modalActions.open("viewDeleted", {
+      items: deleted.data.items,
+      headers: tableHeaders
+    })
+  }
+
   const deleteRows = ([start, end]) => {
     const rows = getRange([start, end]).map(row => items[row - 1]._id)
     axios.post(`http://localhost:4000/data/delete-items`, { items: rows })
@@ -270,6 +314,7 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
         { label: "Add Item", action: addItemAction },
         { label: "Edit Details", action: editDetailsAction },
         { label: "Edit Template", disabled: true },
+        { label: "Recover Deleted", action: viewDeleted },
       ]} />
       { tableHeaders && tableItems ? (
         <Table
