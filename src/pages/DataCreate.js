@@ -5,23 +5,23 @@ import { v4 as uuid } from 'uuid'
 
 import Form from '../components/CustomForm'
 
-const fieldItemSchema = {
+const templateItemSchema = {
   type: "object",
   required: ["name", "type"],
   properties: {
     name: {
-      title: "Field Name",
+      title: "Column Name",
       type: "string"
     },
     type: {
-      title: "Field Type",
+      title: "Column Data Type",
       type: "string",
       default: "string",
       enum: ["string", "number", "boolean"],
       enumNames: ["Text", "Number", "True/False"]
     },
     required: {
-      title: "This field is required",
+      title: "This column is required",
       default: true,
       type: "boolean"
     }
@@ -35,16 +35,11 @@ const formSchema = {
     details: {
       title: "Details",
       type: "object",
-      required: [ "name", "path" ],
+      required: [ "name" ],
       properties: {
         name: {
           title: "Name",
           type: "string"
-        },
-        path: {
-          title: "Path",
-          type: "string",
-          description: "this will be the url path for your dataset"
         },
         description: {
           title: "Description",
@@ -52,11 +47,11 @@ const formSchema = {
         }
       }
     },
-    fields: {
-      title: "Fields",
+    template: {
+      title: "Template",
       type: "array",
       minItems: 1,
-      items: fieldItemSchema
+      items: templateItemSchema
     }
   }
 }
@@ -65,14 +60,11 @@ const formUISchema = {
   details: {
     "ui:form-group": true,
     "ui:form-step": "1",
-    path: {
-      "ui:disabled": "true"
-    },
     description: {
       "ui:widget": "textarea"
     }
   },
-  fields: {
+  template: {
     "ui:form-step": "2",
     items: {
       "ui:form-group": true,
@@ -85,7 +77,7 @@ const formUISchema = {
 }
 
 const initialFormData = {
-  fields: [{}]
+  template: [{}]
 }
 
 
@@ -180,7 +172,6 @@ const Page = styled.div`
 
 
 const transformErrors = errors => errors
-  .filter(err => err.property !== ".details.path")
   .map(err => {
     if (err.property === ".fields" && err.name === "required") {
       err.message = "cannot be empty"
@@ -188,7 +179,7 @@ const transformErrors = errors => errors
     return err
   })
 
-const generateTemplate = ({ details, fields }) => {
+const generateTemplate = ({ details, template }) => {
   const templateObject = {
     title: details.name,
     type: "object",
@@ -196,24 +187,17 @@ const generateTemplate = ({ details, fields }) => {
     properties: {}
   }
 
-  fields.forEach(field => {
+  template.forEach(property => {
     const id = uuid()
-    if (field.required) templateObject.required.push(id)
+    if (property.required) templateObject.required.push(id)
     templateObject.properties[id] = {
-      title: field.name,
-      type: field.type
+      title: property.name,
+      type: property.type
     }
   })
 
   return templateObject
 }
-
-const nameToPath = name => (
-  name && name.toLowerCase()
-    .replace(/[^a-z\d-_ ]/g, "")
-    .trim()
-    .replace(/[\s-_]+/g, "-")
-)
 
 const DataCreate = () => {
   const [formData, setFormData] = React.useState(initialFormData)
@@ -230,8 +214,7 @@ const DataCreate = () => {
   }
 
   const handleChange = ({formData}) => {
-    const path = nameToPath(formData.details.name)
-    setFormData({...formData, details: {...formData.details, path}})
+    setFormData(formData)
   }
 
   return (
@@ -245,7 +228,7 @@ const DataCreate = () => {
         transformErrors={ transformErrors }
       >
         <FormActionsContainer>
-          <Submit>Publish</Submit>
+          <Submit>Create</Submit>
           <TextButton>Cancel</TextButton>
         </FormActionsContainer>
       </Form>

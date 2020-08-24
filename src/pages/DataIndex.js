@@ -215,17 +215,8 @@ const ActionMenuItem = styled.button.attrs(() => ({
   }
 `
 
-const statuses = {
-  draft: { value: "draft", label: "Draft" },
-  published: { value: "published", label: "Published" },
-  archived: { value: "archived", label: "Archived" }
-}
-
-const statusStructures = {}
-
 const DataIndex = () => {
   const [dataStructures, setDataStructures] = useState([])
-  const [status, setStatus] = useState("published")
   const [ menuState, setMenuState ] = useState({})
   const menuContainer = useRef()
 
@@ -236,24 +227,18 @@ const DataIndex = () => {
   }, [ menuState ])
 
   useEffect(() => {
-    setDataStructures(statusStructures[status] || [])
-    axios.get(`http://localhost:4000/data/?status=${status}`)
+    axios.get(`http://localhost:4000/data`)
       .then(res => {
         setDataStructures(res.data)
       })
       .catch(console.error)
-  },[ status ])
+  },[])
 
   const handleDelete = (e, dataStructure) => {
     e.preventDefault()
     axios.post("http://localhost:4000/data/delete", dataStructure)
       .then(res => setDataStructures(res.data))
       .catch(console.error)
-  }
-
-  const handleStatusSelect = ({ value }) => {
-    statusStructures[status] = dataStructures
-    setStatus(value)
   }
 
   const closeMenu = () => {
@@ -341,22 +326,12 @@ const DataIndex = () => {
     <Page>
       <ListHeader>
         <h1>Datasets</h1>
-        <StatusSelect
-          value={ statuses[status] }
-          isSearchable={ false }
-          onChange={ handleStatusSelect }
-          options={[
-            { value: "published", label: "Published" },
-            { value: "archived", label: "Archived" },
-            { value: "draft", label: "Drafts", isDisabled: true }
-          ]}
-        />
       </ListHeader>
       <DataStructureListContainer>
         <ListColumns>
           <div>Name</div>
-          <div>Published</div>
-          <div>Status</div>
+          <div>Created On</div>
+          {/* <div>Status</div> */}
           {/* <div>Actions</div> */}
         </ListColumns>
         { dataStructures.length ? dataStructures.map(data => {
@@ -364,11 +339,12 @@ const DataIndex = () => {
             month: 'short', day: 'numeric', year: 'numeric'
           })
           return (
-            <DataStructureListItem key={data.path}>
-              <Link to={`/${data.path}`}>
+            <DataStructureListItem key={data._id}>
+              <Link to={`/${data.id}`}>
                 <DatasetTitle>{ data.name }</DatasetTitle>
                 <span>{ created }</span>
-                <DatasetStatus>{ data.status }</DatasetStatus>
+                {/* <DatasetStatus>{ data.status }</DatasetStatus> */}
+                <div />
                 <ActionsButton onClick={ (e) => handleActionClick(e, data) }>︙</ActionsButton>
                 {/* <DeleteDataStructureButton onClick={(e) => handleDelete(e, data)}>Delete</DeleteDataStructureButton> */}
               </Link>
@@ -376,17 +352,14 @@ const DataIndex = () => {
           )
         }) : [0,1,2,3,4].map((i) => <PlaceholderLi key={ i } />) }
       </DataStructureListContainer>
-      <CreateDataStructureLink to="/create">Create Data Structure</CreateDataStructureLink>
+      <CreateDataStructureLink to="/create">New Dataset</CreateDataStructureLink>
       <ActionsMenu
         {...menuState}
         ref={ menuContainer }
         onKeyDown={ handleMenuKeyDown }
         onBlur={ handleMenuBlur }
       >
-        { status === "archived"
-          ? <li><ActionMenuItem data-value="unarchive" onClick={ handleActionItemClick }>Unarchive Dataset</ActionMenuItem></li>
-          : <li><ActionMenuItem data-value="archive" onClick={ handleActionItemClick }>Archive Dataset</ActionMenuItem></li>
-        }
+        <li><ActionMenuItem data-value="delete" onClick={ handleActionItemClick }>Delete Dataset</ActionMenuItem></li>
         <li><ActionMenuItem disabled data-value="share" onClick={ handleActionItemClick }>Share Dataset</ActionMenuItem></li>
         <li><ActionMenuItem disabled data-value="export" onClick={ handleActionItemClick }>Export Dataset</ActionMenuItem></li>
         <li><ActionMenuItem disabled data-value="invite" onClick={ handleActionItemClick }>Invite Collaborator</ActionMenuItem></li>

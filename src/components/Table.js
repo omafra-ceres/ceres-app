@@ -308,14 +308,14 @@ const Control = ({
   return (
     <>
       <TableControl
-        ref={ addScroller("control-header") }
-        onScroll={ handleScroll() }
+        ref={ addScroller("control-header", "x") }
+        onScroll={ handleScroll("x") }
         selection={ colSelection }
         {...{ onClick, ...headerProps }}
       />
       <TableControl
-        ref={ addScroller("control-rownum") }
-        onScroll={ handleScroll() }
+        ref={ addScroller("control-rownum", "y") }
+        onScroll={ handleScroll("y") }
         selection={ rowSelection }
         {...{ onClick, ...rownumProps }}
       />
