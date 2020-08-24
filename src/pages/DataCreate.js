@@ -229,7 +229,7 @@ const DataCreate = () => {
       >
         <FormActionsContainer>
           <Submit>Create</Submit>
-          <TextButton>Cancel</TextButton>
+          <TextButton onClick={() => window.location.pathname = "/"}>Cancel</TextButton>
         </FormActionsContainer>
       </Form>
     </Page>
