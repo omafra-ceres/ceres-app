@@ -97,7 +97,7 @@ const AddItemForm = ({ template={}, datasetId, onSubmit, closeModal }) => {
   }, [template.properties])
 
   const handleSubmit = ({formData}) => {
-    axios.post(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}`, formData)
+    axios.post(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}/addItem`, formData)
       .then(res => {
         onSubmit(res.data.item)
       }).catch(console.error)
@@ -200,13 +200,15 @@ const ViewDeleted = ({ items, headers }) => (
 const DataShow = ({ location: { pathname: datasetId }}) => {
   const [{details, template}, setDataset] = useState({})
   const [items, setItems] = useState()
+  const [hasDeleted, setHasDeleted] = useState()
 
   useEffect(() => {
     axios.get(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}`)
       .then(res => {
-        const { details, items, template } = res.data
+        const { details, items, template, hasDeleted } = res.data
         setDataset({ details, template })
         setItems(items)
+        setHasDeleted(hasDeleted)
       }).catch(console.error)
   },[ datasetId ])
 
@@ -288,6 +290,7 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
     const rows = getRange([start, end]).map(row => items[row - 1]._id)
     axios.post(`${process.env.REACT_APP_API_URL}/data/delete-items`, { items: rows })
       .then(() => {
+        if (!hasDeleted) setHasDeleted(true)
         setItems(items.filter(item => !rows.includes(item._id)))
       }).catch(console.error)
   }
@@ -314,7 +317,7 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
         { label: "Add Item", action: addItemAction },
         { label: "Edit Details", action: editDetailsAction },
         { label: "Edit Template", disabled: true },
-        { label: "Recover Deleted", action: viewDeleted },
+        { label: "Recover Deleted", action: viewDeleted, disabled: !hasDeleted },
       ]} />
       { tableHeaders && tableItems ? (
         <Table
