@@ -7,7 +7,7 @@
 /////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////
 
-import React from "react"
+import React, { useEffect, useCallback } from "react"
 import styled from "styled-components"
 
 import useModal from "../customHooks/useModal"
@@ -41,23 +41,27 @@ const ModalContentContainer = styled.div`
 const Modal = () => {
   const [modalState, modalActions] = useModal()
 
+  const Content = modalState.content
+  
   const handleOverlayClick = e => {
     if (e.target === e.currentTarget) {
       modalActions.close()
     }
   }
-  const handleKeyDown = e => {
-    if (e.key === "Escape") {
+  
+  const handleKeyDown = useCallback(e => {
+    if (modalState.isOpen && e.key === "Escape") {
       modalActions.close()
     }
-  }
-  const Content = modalState.content
+  }, [ modalState, modalActions ])
+
+  useEffect(() => {
+    document.addEventListener("keydown", handleKeyDown)
+    return () => document.removeEventListener("keydown", handleKeyDown)
+  }, [ handleKeyDown ])
   
   return (
-    <ModalOverlay
-      onClick={ handleOverlayClick }
-      onKeyDown={ handleKeyDown }
-    >
+    <ModalOverlay onClick={ handleOverlayClick }>
       <ModalContentContainer>
         { Content ? <Content {...(modalState.data || {})} /> : "" }
       </ModalContentContainer>

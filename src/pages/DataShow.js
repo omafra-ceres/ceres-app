@@ -69,11 +69,17 @@ const TH = styled.th`
   background: #333;
   color: white;
   padding: 2px 4px;
+  position: sticky;
+  text-align: left;
+  top: 0;
+  white-space: nowrap;
+  z-index: 1;
 `
 
 const TD = styled.td`
   border: 1px solid #333;
   padding: 2px 4px;
+  white-space: nowrap;
 `
 
 //////                            //////
@@ -85,6 +91,8 @@ const AddItemForm = ({ template={}, datasetId, onSubmit, closeModal }) => {
   const [newItem, setNewItem] = useState({})
   const addItemFormEl = useRef()
 
+  useEffect(() => () => setNewItem({}), [ closeModal ])
+
   useEffect(() => {
     if (!template.properties) return
 
@@ -93,8 +101,11 @@ const AddItemForm = ({ template={}, datasetId, onSubmit, closeModal }) => {
         return template.properties[key].type === "boolean"
       })
     setNewItem(booleanFields.reduce((obj, field) => ({...obj, [field]: false}), {}))
-    addItemFormEl.current.formElement[0].focus()
   }, [template.properties])
+
+  useEffect(() => {
+    addItemFormEl.current.formElement[0].focus()
+  }, [ closeModal ])
 
   const handleSubmit = ({formData}) => {
     axios.post(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}/addItem`, formData)
@@ -129,9 +140,11 @@ const EditDetailsForm = ({ datasetId, onSubmit, closeModal, details }) => {
   const [newDetails, setNewDetails] = useState({name, description})
   const formEl = useRef()
 
+  useEffect(() => () => setNewDetails({ name, description }), [ name, description, closeModal ])
+
   useEffect(() => {
     formEl.current.formElement[0].focus()
-  }, [])
+  }, [ closeModal ])
 
   const handleSubmit = ({formData}) => {
     axios.post(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}/update`, formData)
@@ -174,28 +187,92 @@ const EditDetailsForm = ({ datasetId, onSubmit, closeModal, details }) => {
   )
 }
 
-const ViewDeleted = ({ items, headers }) => (
-  <div>
-    <table>
-      <thead>
-        <tr>
-          { headers.map(header => <TH>{ header.title }</TH>) }
-          <th>Deleted On</th>
-        </tr>
-      </thead>
-      <tbody>
-        { items.map(item => (
-          <tr>
-            { headers.map(({ id }) => <TD>{ item.data_values[id] }</TD>) }
-            <td>{ new Date(item.deleted_on).toLocaleDateString(undefined, {
-              month: 'short', day: 'numeric', year: 'numeric'
-            }) }</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-)
+const ViewDeleted = ({ items, headers, recover, closeModal, datasetId }) => {
+  const [selected, setSelected] = useState([])
+
+  useEffect(() => () => setSelected([]), [ closeModal ])
+
+  const toggleItemSelection = id => {
+    const newSelected = selected.includes(id)
+      ? selected.filter(itemId => itemId !== id)
+      : [...selected, id]
+    setSelected(newSelected)
+  }
+
+  const handleRecover = () => {
+    axios.post(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}/recover-deleted`, { items: selected })
+    recover(items.filter(({ _id }) => selected.includes(_id)))
+    closeModal()
+  }
+  
+  const ItemCheck = ({ id }) => (
+    <td style={{ position: "sticky", left: 0, background: "white" }}>
+      <input
+        type="checkbox"
+        checked={ selected.includes(id) }
+        onChange={ () => toggleItemSelection(id) }
+      />
+    </td>
+  )
+  const ItemDate = ({ date }) => (
+    <td style={{
+      padding: "0 20px 0 10px",
+      whiteSpace: "nowrap",
+      position: "sticky",
+      left: 22,
+      background: "white"
+    }}>
+      { new Date(date).toLocaleDateString(undefined, {
+        month: 'short', day: 'numeric', year: 'numeric'
+      })}
+    </td>
+  )
+  return (
+    <div>
+      <div style={{
+        maxHeight: "80vh",
+        maxWidth: "80vw",
+        overflow: "auto",
+        position: "relative"
+      }}>
+        <table style={{
+          borderSpacing: 0,
+          borderCollapse: "collapse",
+          tableLayout: "fixed",
+        }}>
+          <thead>
+            <tr style={{ borderRight: "1px solid #333" }}>
+              <TH style={{ background: "white", left: 0, zIndex: 2 }} />
+              <TH style={{
+                paddingLeft: "10px",
+                background: "white",
+                color: "#333",
+                left: 22,
+                zIndex: 2
+              }}>Deleted On</TH>
+              { headers.map(header => <TH key={ header.id }>{ header.title }</TH>) }
+            </tr>
+          </thead>
+          <tbody>
+            { items.map((item, rowIndex) => (
+              <tr key={ rowIndex } style={{
+                background: selected.includes(item._id) ? "#bbdfff" : "#fff"
+              }}>
+                <ItemCheck id={ item._id } />
+                <ItemDate date={ item.deleted_on } />
+                { headers.map(({ id }, colIndex) => <TD key={ `${rowIndex}/${colIndex}` }>{ JSON.stringify(item.data_values[id]) }</TD>) }
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <FormToolbar>
+        <Button buttonType="fill" onClick={ handleRecover }>Recover { selected.length } items</Button>
+        <Button buttonType="text" onClick={ closeModal }>Cancel</Button>
+      </FormToolbar>
+    </div>
+  )
+}
 
 const DataShow = ({ location: { pathname: datasetId }}) => {
   const [{details, template}, setDataset] = useState({})
@@ -281,14 +358,17 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
     const deleted = await axios.get(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}/deleted`)
       .catch(console.error)
     modalActions.open("viewDeleted", {
+      closeModal: () => modalActions.close(),
       items: deleted.data.items,
-      headers: tableHeaders
+      headers: tableHeaders,
+      recover: recovered => setItems([...items, ...recovered].sort((a, b) => a.created_on - b.created_on)),
+      datasetId
     })
   }
 
   const deleteRows = ([start, end]) => {
     const rows = getRange([start, end]).map(row => items[row - 1]._id)
-    axios.post(`${process.env.REACT_APP_API_URL}/data/delete-items`, { items: rows })
+    axios.post(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}/delete-items`, { items: rows })
       .then(() => {
         if (!hasDeleted) setHasDeleted(true)
         setItems(items.filter(item => !rows.includes(item._id)))
