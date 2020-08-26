@@ -67,6 +67,7 @@ const ActionContainer = styled.div`
 
 const TH = styled.th`
   background: #333;
+  border-bottom: 1px solid #333;
   color: white;
   padding: 2px 4px;
   position: sticky;
@@ -74,12 +75,70 @@ const TH = styled.th`
   top: 0;
   white-space: nowrap;
   z-index: 1;
+
+  &.deleted-on-header {
+    padding-left: 10px;
+    background: white;
+    color: #333;
+    left: 28px;
+    z-index: 2;
+  }
+
+  &.empty-header {
+    background: white;
+    left: 0px;
+    z-index: 2;
+  }
 `
 
 const TD = styled.td`
+  background: white;
   border: 1px solid #333;
   padding: 2px 4px;
   white-space: nowrap;
+
+  &.sticky {
+    border: none;
+    left: 0px;
+    position: sticky;
+  }
+
+  &.sticky-date {
+    left: 28px;
+    padding: 0 20px 0 10px;
+    white-space: nowrap;
+  }
+`
+
+const TR = styled.tr.attrs(props => ({
+  style: { ...props.selected && { background: "#bbdfff" } }
+}))`
+  background: white;
+`
+
+const DeletedTableWrap = styled.div`
+  max-height: 80vh;
+  max-width: 80vw;
+  overflow: auto;
+`
+
+const DeletedTable = styled.table`
+  border-right: 1px solid #333;
+  border-spacing: 0;
+  border-collapse: collapse;
+  table-layout: fixed;
+`
+
+const SelectAllLabel = styled.label`
+  display: block;
+  margin-top: 10px;
+  padding: 5px 0;
+  width: 152px;
+
+  input {
+    margin-right: 17px;
+    margin-left: 8px;
+  }
 `
 
 //////                            //////
@@ -206,66 +265,53 @@ const ViewDeleted = ({ items, headers, recover, closeModal, datasetId }) => {
   }
   
   const ItemCheck = ({ id }) => (
-    <td style={{ position: "sticky", left: 0, background: "white" }}>
+    <TD className="sticky">
       <input
         type="checkbox"
         checked={ selected.includes(id) }
         onChange={ () => toggleItemSelection(id) }
       />
-    </td>
+    </TD>
   )
   const ItemDate = ({ date }) => (
-    <td style={{
-      padding: "0 20px 0 10px",
-      whiteSpace: "nowrap",
-      position: "sticky",
-      left: 22,
-      background: "white"
-    }}>
+    <TD className="sticky sticky-date">
       { new Date(date).toLocaleDateString(undefined, {
         month: 'short', day: 'numeric', year: 'numeric'
       })}
-    </td>
+    </TD>
+  )
+  const SelectAll = () => (
+    <input
+      type="checkbox"
+      checked={ selected.length }
+      onChange={ () => setSelected(selected.length ? [] : items.map(({_id}) => _id)) }
+    />
   )
   return (
     <div>
-      <div style={{
-        maxHeight: "80vh",
-        maxWidth: "80vw",
-        overflow: "auto",
-        position: "relative"
-      }}>
-        <table style={{
-          borderSpacing: 0,
-          borderCollapse: "collapse",
-          tableLayout: "fixed",
-        }}>
+      <DeletedTableWrap>
+        <DeletedTable>
           <thead>
-            <tr style={{ borderRight: "1px solid #333" }}>
-              <TH style={{ background: "white", left: 0, zIndex: 2 }} />
-              <TH style={{
-                paddingLeft: "10px",
-                background: "white",
-                color: "#333",
-                left: 22,
-                zIndex: 2
-              }}>Deleted On</TH>
+            <TR>
+              <TH className="empty-header">
+                <SelectAll />
+              </TH>
+              <TH className="deleted-on-header">Deleted On</TH>
               { headers.map(header => <TH key={ header.id }>{ header.title }</TH>) }
-            </tr>
+            </TR>
           </thead>
           <tbody>
             { items.map((item, rowIndex) => (
-              <tr key={ rowIndex } style={{
-                background: selected.includes(item._id) ? "#bbdfff" : "#fff"
-              }}>
+              <TR key={ rowIndex } selected={ selected.includes(item._id) }>
                 <ItemCheck id={ item._id } />
                 <ItemDate date={ item.deleted_on } />
                 { headers.map(({ id }, colIndex) => <TD key={ `${rowIndex}/${colIndex}` }>{ JSON.stringify(item.data_values[id]) }</TD>) }
-              </tr>
+              </TR>
             ))}
           </tbody>
-        </table>
-      </div>
+        </DeletedTable>
+      </DeletedTableWrap>
+      {/* <SelectAll /> */}
       <FormToolbar>
         <Button buttonType="fill" onClick={ handleRecover }>Recover { selected.length } items</Button>
         <Button buttonType="text" onClick={ closeModal }>Cancel</Button>
