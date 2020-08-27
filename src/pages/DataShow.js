@@ -88,6 +88,73 @@ const ActionContainer = styled.div`
   }
 `
 
+const FilterContainer = styled(ActionContainer)`
+  align-items: center;
+  font-size: 13.33px;
+  padding: 5px 15px 5px 26px;
+
+  > :first-child {
+    box-shadow: 2px 0 2px -1px #ddd;
+    line-height: 20px;
+    margin-right: 20px;
+    padding-right: 10px;
+  }
+  
+  > button {
+    align-items: center;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: #333;
+    display: flex;
+    height: 22px;
+    overflow: hidden;
+    padding: 0 5px;
+  
+    > span {
+      font-size: 20px;
+      margin-right: 10px;
+    }
+  }
+`
+
+const Flag = styled.div`
+  align-items: center;
+  background: #eee;
+  border: 1px solid #aaa;
+  border-radius: 4px;
+  color: #333;
+  cursor: default;
+  display: flex;
+  font-size: 12px;
+  height: 22px;
+  margin-right: 10px;
+  padding: 0 5px 0 0;
+
+  &:hover, &:focus-within {
+    border-color: #333;
+  }
+`
+
+const RemoveFlag = styled.button`
+  border: none;
+  border-right: 1px solid transparent;
+  border-top-left-radius: 2px;
+  border-bottom-left-radius: 2px;
+  color: inherit;
+  height: 20px;
+  margin-right: 5px;
+
+  *:hover > &, &:hover, &:focus {
+    border-color: inherit;
+    font-weight: bold;
+    outline: none;
+  }
+
+  &:active, *:active > & {
+    background: #ddd;
+  }
+`
+
 const TH = styled.th`
   background: #333;
   border-bottom: 1px solid #333;
@@ -501,6 +568,16 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
     </ActionContainer>
   )
 
+  const FilterBar = () => {
+    return (
+      <FilterContainer>
+        <div>Filters</div>
+        <Flag><RemoveFlag>✕</RemoveFlag>'Bug number' is '0'</Flag>
+        <button className="add-filter"><span>+</span> Add Filter</button>
+      </FilterContainer>
+    )
+  }
+
   return details ? (
     <Page>
       <TitleBar title={ details.name } openDetails={ () => editDetailsAction("view") } />
@@ -510,6 +587,7 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
         { label: "Edit Template", disabled: true },
         { label: "Recover Deleted", action: viewDeleted, disabled: !hasDeleted },
       ]} />
+      <FilterBar />
       { tableHeaders && tableItems ? (
         <Table
           headers={ tableHeaders }
