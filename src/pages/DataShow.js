@@ -7,7 +7,7 @@ import Form from '../components/CustomForm'
 import Button from '../components/Button'
 
 import useModal from '../customHooks/useModal'
-import { getRange } from '../utils'
+import { getRange, placeholderIfNull } from '../utils'
 
 
 ////////////////////////////////////////
@@ -138,8 +138,8 @@ const Flag = styled.div`
 const RemoveFlag = styled.button`
   border: none;
   border-right: 1px solid transparent;
-  border-top-left-radius: 2px;
-  border-bottom-left-radius: 2px;
+  border-top-left-radius: 3px;
+  border-bottom-left-radius: 3px;
   color: inherit;
   height: 20px;
   margin-right: 5px;
@@ -321,7 +321,6 @@ const EditDetailsForm = ({ datasetId, onSubmit, closeModal, details, viewMode })
     } else if (mode === "edit") {
       axios.post(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}/update`, { name, description })
         .then(() => {
-          console.log(newDetails)
           onSubmit(newDetails)
         }).catch(console.error)
     }
@@ -449,10 +448,54 @@ const ViewDeleted = ({ items, headers, recover, closeModal, datasetId }) => {
   )
 }
 
+const demoFilters = [
+  ["e732b6cd-2443-4f4a-bced-00727c68ca3f", -1],
+  ["c390ea58-971d-4b54-9101-576fdb32be47", "> 0"],
+  ["5656902a-3ab5-4304-a1e1-429bdc1cac82", "= true"]
+]
+
+const filterOperators = {
+  "=": check => val => placeholderIfNull(val).toString() === check,
+  ">": check => val => (placeholderIfNull(val, 1) * 1) > check,
+  "<": check => val => (placeholderIfNull(val, 1) * 1) < check
+}
+
+const getFilterFunction = filtersArray => {
+  const includes = []
+  const excludes = []
+  const query = {}
+  filtersArray.forEach(filter => {
+    const [col, val] = filter
+    if ([1, -1].includes(val)) {
+      (val === 1 ? includes : excludes).push(col)
+    } else {
+      const operator = val[0]
+      const check = val.slice(2)
+      query[col] = filterOperators[operator](check)
+    }
+  })
+
+  const checkCol = col => {
+    const checkIncludes = !includes.length || includes.includes(col)
+    const checkExcludes = !excludes.length || !excludes.includes(col)
+    return checkIncludes && checkExcludes
+  }
+  
+  const checkRow = row => {
+    const cols = Object.keys(query)
+    const checkQuery = cols.map(col => query[col](row[col])).every(check => !!check)
+    return checkQuery
+  }
+  return [ checkCol, checkRow ]
+}
+
 const DataShow = ({ location: { pathname: datasetId }}) => {
-  const [{details, template}, setDataset] = useState({})
-  const [items, setItems] = useState()
-  const [hasDeleted, setHasDeleted] = useState()
+  const [ {details, template}, setDataset ] = useState({})
+  const [ items, setItems ] = useState()
+  const [ hasDeleted, setHasDeleted ] = useState()
+  const [ filters, setFilters ] = useState(demoFilters)
+
+  const [ filterCol, filterRow ] = useMemo(() => getFilterFunction(filters), [ filters ])
 
   useEffect(() => {
     axios.get(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}`)
@@ -466,18 +509,18 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
 
   const tableHeaders = useMemo(() => {
     if (!template) return
-    const keys = Object.keys(template.properties)
+    const keys = Object.keys(template.properties).filter(filterCol)
     return keys.map(key => ({
       id: key,
       required: template.required.includes(key),
       ...template.properties[key]
     }))
-  }, [template])
+  }, [template, filterCol])
 
   const tableItems = useMemo(() => {
     if (!tableHeaders || !items) return
     const itemArr = []
-    items.forEach(item => {
+    items.filter(item => filterRow(item.data_values)).forEach(item => {
       const rowArr = []
       tableHeaders.forEach(header => {
         rowArr.push(item.data_values[header.id])
@@ -485,7 +528,7 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
       itemArr.push(rowArr)
     })
     return itemArr
-  }, [items, tableHeaders])
+  }, [items, tableHeaders, filterRow])
   
   const modalActions = useModal({
     addItem: AddItemForm,
@@ -568,11 +611,25 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
     </ActionContainer>
   )
 
+  const FilterFlag = useCallback(({ filter }) => {
+    const [ col, val ] = filter
+    const { title } = template.properties[col]
+    
+    let filterString = [1, -1].includes(val)
+      ? `${val === 1 ? "Show" : "Hide"} '${title}'`
+      : `'${title}' ${val}`
+    
+    const handleClick = () => setFilters(filters.filter(f => f !== filter))
+    return (
+      <Flag onClick={ handleClick }><RemoveFlag>✕</RemoveFlag>{ filterString }</Flag>
+    )
+  }, [ template, filters ])
+
   const FilterBar = () => {
     return (
       <FilterContainer>
         <div>Filters</div>
-        <Flag><RemoveFlag>✕</RemoveFlag>'Bug number' is '0'</Flag>
+        { filters.map((filter, i) => <FilterFlag key={ i } {...{ filter }} />) }
         <button className="add-filter"><span>+</span> Add Filter</button>
       </FilterContainer>
     )
