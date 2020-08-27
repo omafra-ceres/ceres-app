@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from 'react'
 import styled from 'styled-components'
 import axios from 'axios'
 
@@ -21,15 +21,47 @@ const Page = styled.div`
   height: calc(100vh - 70px);
   margin: 0 auto;
   padding: 0;
+`
 
-  h1 {
+const TitleBarContainer = styled.div`
+  display: flex;
+  padding: 10px 25px 12px;
+
+  > h1 {
     font-size: ${ p => p.theme.headerSize };
-    margin-left: 25px;
+    margin: 0;
+  }
+
+  > ${Button} {
+    text-decoration: underline;
+
+    &:focus, &:hover {
+      border: none;
+      box-shadow: none;
+      color: #2684ff;
+    }
   }
 `
 
 const StyledForm = styled(Form)`
   min-width: 400px;
+
+  input, textarea {
+    margin-top: 0;
+  }
+
+  input:read-only, textarea:read-only {
+    border: none;
+    cursor: default;
+    font: inherit;
+    height: auto;
+    padding-left: 0;
+    resize: none;
+
+    &:focus {
+      box-shadow: none;
+    }
+  }
 `
 
 const FormToolbar = styled.div`
@@ -38,19 +70,10 @@ const FormToolbar = styled.div`
   margin-top: 30px;
 `
 
-const DescriptionContainer = styled.div`
-  max-width: 800px;
-  margin-left: 25px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-`
-
 const ActionContainer = styled.div`
   border-top: 2px solid #ddd;
   display: flex;
   flex-direction: row;
-  margin-top: 10px;
   padding: 0 10px;
 
   > button {
@@ -129,22 +152,25 @@ const DeletedTable = styled.table`
   table-layout: fixed;
 `
 
-const SelectAllLabel = styled.label`
-  display: block;
-  margin-top: 10px;
-  padding: 5px 0;
-  width: 152px;
-
-  input {
-    margin-right: 17px;
-    margin-left: 8px;
-  }
-`
-
 //////                            //////
 //////      Component Styles      //////
 //////                            //////
 ////////////////////////////////////////
+
+
+const TitleBar = ({ title, openDetails }) => {
+  return (
+    <TitleBarContainer>
+      <h1>{ title }</h1>
+      <Button
+        buttonType="text"
+        onClick={ openDetails }
+      >
+        view details
+      </Button>
+    </TitleBarContainer>
+  )
+}
 
 const AddItemForm = ({ template={}, datasetId, onSubmit, closeModal }) => {
   const [newItem, setNewItem] = useState({})
@@ -194,35 +220,62 @@ const AddItemForm = ({ template={}, datasetId, onSubmit, closeModal }) => {
   )
 }
 
-const EditDetailsForm = ({ datasetId, onSubmit, closeModal, details }) => {
-  const { name, description } = details
-  const [newDetails, setNewDetails] = useState({name, description})
+const getFormData = details => ({
+  ...details,
+  created_at: new Date(details.created_at).toLocaleDateString(undefined, {
+    month: 'short', day: 'numeric', year: 'numeric'
+  })
+})
+
+const EditDetailsForm = ({ datasetId, onSubmit, closeModal, details, viewMode }) => {
+  const [ mode, setMode ] = useState(viewMode)
+  const [newDetails, setNewDetails] = useState(details)
   const formEl = useRef()
 
-  useEffect(() => () => setNewDetails({ name, description }), [ name, description, closeModal ])
+  useLayoutEffect(() => {
+    setMode(viewMode)
+    return () => setMode(viewMode)
+  }, [ viewMode, closeModal ])
+
+  useEffect(() => {
+    setNewDetails(details)
+    return () => {
+      setNewDetails(details)
+    }
+  }, [ details, closeModal ])
 
   useEffect(() => {
     formEl.current.formElement[0].focus()
   }, [ closeModal ])
 
-  const handleSubmit = ({formData}) => {
-    axios.post(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}/update`, formData)
-      .then(() => {
-        onSubmit(newDetails)
-      }).catch(console.error)
+  const handleSubmit = ({ formData: { name, description }}) => {
+    if (mode === "view") {
+      setMode("edit")
+    } else if (mode === "edit") {
+      axios.post(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}/update`, { name, description })
+        .then(() => {
+          console.log(newDetails)
+          onSubmit(newDetails)
+        }).catch(console.error)
+    }
   }
 
-  const handleChange = ({formData}) => {
-    setNewDetails(formData)
+  const handleChange = ({ formData: { name, description }}) => {
+    setNewDetails({ ...newDetails, name, description })
   }
 
   return (
     <StyledForm
-      formData={ newDetails }
+      formData={ getFormData(newDetails) }
       schema={{
-        title: "Edit Details",
         type: "object",
+        required: ["name", "description", "created_at"],
         properties: {
+          created_at: {
+            title: "Created on",
+            type: "string",
+            readOnly: true
+          },
           name: {
             title: "Name",
             type: "string"
@@ -230,16 +283,25 @@ const EditDetailsForm = ({ datasetId, onSubmit, closeModal, details }) => {
           description: {
             title: "Description",
             type: "string"
-          },
+          }
         }
       }}
-      uiSchema={{ description: { "ui:widget": "textarea" }}}
+      uiSchema={{
+        "ui:title": mode === "view" ? "Details" : "Edit Details",
+        name: {
+          "ui:readonly": mode === "view"
+        },
+        description: {
+          "ui:widget": "textarea",
+          "ui:readonly": mode === "view"
+        }
+      }}
       onSubmit={ handleSubmit }
       onChange={ handleChange }
       ref={ formEl }
     >
       <FormToolbar>
-        <Button buttonType="fill" type="submit">Submit</Button>
+        <Button buttonType="fill" type="submit">{ mode === "view" ? "Edit" : "Submit" }</Button>
         <Button buttonType="text" onClick={ closeModal }>Cancel</Button>
       </FormToolbar>
     </StyledForm>
@@ -277,7 +339,7 @@ const ViewDeleted = ({ items, headers, recover, closeModal, datasetId }) => {
     <TD className="sticky sticky-date">
       { new Date(date).toLocaleDateString(undefined, {
         month: 'short', day: 'numeric', year: 'numeric'
-      })}
+      }) }
     </TD>
   )
   const SelectAll = () => (
@@ -390,12 +452,13 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
     })
   }, [details, modalActions, template])
   
-  const editDetailsAction = () => {
+  const editDetailsAction = (viewMode="edit") => {
     const data = {
       closeModal: () => modalActions.close(),
       onSubmit: detailsSubmit,
       datasetId,
-      details
+      details,
+      viewMode
     }
     modalActions.open("editDetails", data)
   }
@@ -413,7 +476,10 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
   }
 
   const deleteRows = ([start, end]) => {
-    const rows = getRange([start, end]).map(row => items[row - 1]._id)
+    const rows = getRange([start, end])
+      .map(row => (items[row - 1] || {})._id)
+      .filter(id => !!id)
+    if (!rows.length) return
     axios.post(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}/delete-items`, { items: rows })
       .then(() => {
         if (!hasDeleted) setHasDeleted(true)
@@ -437,8 +503,7 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
 
   return details ? (
     <Page>
-      <h1>{ details.name }</h1>
-      <DescriptionContainer>{ details.description }</DescriptionContainer>
+      <TitleBar title={ details.name } openDetails={ () => editDetailsAction("view") } />
       <ActionBar actions={[
         { label: "Add Item", action: addItemAction },
         { label: "Edit Details", action: editDetailsAction },
