@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import styled from 'styled-components'
 import axios from 'axios'
 
 import Table from '../components/Table'
-import Form from '../components/CustomForm'
 import Button from '../components/Button'
+import { AddItemForm, EditDetailsForm, DeletedItems, ManageFilters } from '../components/modals'
 
 import useModal from '../customHooks/useModal'
 import { getRange, placeholderIfNull } from '../utils'
@@ -41,33 +41,6 @@ const TitleBarContainer = styled.div`
       color: #2684ff;
     }
   }
-`
-
-const StyledForm = styled(Form)`
-  min-width: 400px;
-
-  input, textarea {
-    margin-top: 0;
-  }
-
-  input:read-only, textarea:read-only {
-    border: none;
-    cursor: default;
-    font: inherit;
-    height: auto;
-    padding-left: 0;
-    resize: none;
-
-    &:focus {
-      box-shadow: none;
-    }
-  }
-`
-
-const FormToolbar = styled.div`
-  display: flex;
-  flex-direction: row;
-  margin-top: 30px;
 `
 
 const ActionContainer = styled.div`
@@ -158,70 +131,6 @@ const RemoveFlag = styled.button`
   }
 `
 
-const TH = styled.th`
-  background: #333;
-  border-bottom: 1px solid #333;
-  color: white;
-  padding: 2px 4px;
-  position: sticky;
-  text-align: left;
-  top: 0;
-  white-space: nowrap;
-  z-index: 1;
-
-  &.deleted-on-header {
-    padding-left: 10px;
-    background: white;
-    color: #333;
-    left: 28px;
-    z-index: 2;
-  }
-
-  &.empty-header {
-    background: white;
-    left: 0px;
-    z-index: 2;
-  }
-`
-
-const TD = styled.td`
-  background: white;
-  border: 1px solid #333;
-  padding: 2px 4px;
-  white-space: nowrap;
-
-  &.sticky {
-    border: none;
-    left: 0px;
-    position: sticky;
-  }
-
-  &.sticky-date {
-    left: 28px;
-    padding: 0 20px 0 10px;
-    white-space: nowrap;
-  }
-`
-
-const TR = styled.tr.attrs(props => ({
-  style: { ...props.selected && { background: "#bbdfff" } }
-}))`
-  background: white;
-`
-
-const DeletedTableWrap = styled.div`
-  max-height: 80vh;
-  max-width: 80vw;
-  overflow: auto;
-`
-
-const DeletedTable = styled.table`
-  border-right: 1px solid #333;
-  border-spacing: 0;
-  border-collapse: collapse;
-  table-layout: fixed;
-`
-
 //////                            //////
 //////      Component Styles      //////
 //////                            //////
@@ -241,221 +150,6 @@ const TitleBar = ({ title, openDetails }) => {
     </TitleBarContainer>
   )
 }
-
-const AddItemForm = ({ template={}, datasetId, onSubmit, closeModal }) => {
-  const [newItem, setNewItem] = useState({})
-  const addItemFormEl = useRef()
-
-  useEffect(() => () => setNewItem({}), [ closeModal ])
-
-  useEffect(() => {
-    if (!template.properties) return
-
-    const booleanFields = Object.keys(template.properties)
-      .filter(key => {
-        return template.properties[key].type === "boolean"
-      })
-    setNewItem(booleanFields.reduce((obj, field) => ({...obj, [field]: false}), {}))
-  }, [template.properties])
-
-  useEffect(() => {
-    addItemFormEl.current.formElement[0].focus()
-  }, [ closeModal ])
-
-  const handleSubmit = ({formData}) => {
-    axios.post(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}/addItem`, formData)
-      .then(res => {
-        onSubmit(res.data.item)
-      }).catch(console.error)
-  }
-
-  const handleChange = ({formData}) => {
-    setNewItem(formData)
-  }
-
-  return (
-    <StyledForm
-      formData={ newItem }
-      schema={ template }
-      onSubmit={ handleSubmit }
-      onChange={ handleChange }
-      uiSchema={{ "ui:title": "Add Item" }}
-      ref={ addItemFormEl }
-    >
-      <FormToolbar>
-        <Button buttonType="fill" type="submit">Submit</Button>
-        <Button buttonType="text" onClick={ closeModal }>Cancel</Button>
-      </FormToolbar>
-    </StyledForm>
-  )
-}
-
-const getFormData = details => ({
-  ...details,
-  created_at: new Date(details.created_at).toLocaleDateString(undefined, {
-    month: 'short', day: 'numeric', year: 'numeric'
-  })
-})
-
-const EditDetailsForm = ({ datasetId, onSubmit, closeModal, details, viewMode }) => {
-  const [ mode, setMode ] = useState(viewMode)
-  const [newDetails, setNewDetails] = useState(details)
-  const formEl = useRef()
-
-  useLayoutEffect(() => {
-    setMode(viewMode)
-    return () => setMode(viewMode)
-  }, [ viewMode, closeModal ])
-
-  useEffect(() => {
-    setNewDetails(details)
-    return () => {
-      setNewDetails(details)
-    }
-  }, [ details, closeModal ])
-
-  useEffect(() => {
-    formEl.current.formElement[0].focus()
-  }, [ closeModal ])
-
-  const handleSubmit = ({ formData: { name, description }}) => {
-    if (mode === "view") {
-      setMode("edit")
-    } else if (mode === "edit") {
-      axios.post(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}/update`, { name, description })
-        .then(() => {
-          onSubmit(newDetails)
-        }).catch(console.error)
-    }
-  }
-
-  const handleChange = ({ formData: { name, description }}) => {
-    setNewDetails({ ...newDetails, name, description })
-  }
-
-  return (
-    <StyledForm
-      formData={ getFormData(newDetails) }
-      schema={{
-        type: "object",
-        required: ["name", "description", "created_at"],
-        properties: {
-          created_at: {
-            title: "Created on",
-            type: "string",
-            readOnly: true
-          },
-          name: {
-            title: "Name",
-            type: "string"
-          },
-          description: {
-            title: "Description",
-            type: "string"
-          }
-        }
-      }}
-      uiSchema={{
-        "ui:title": mode === "view" ? "Details" : "Edit Details",
-        name: {
-          "ui:readonly": mode === "view"
-        },
-        description: {
-          "ui:widget": "textarea",
-          "ui:readonly": mode === "view"
-        }
-      }}
-      onSubmit={ handleSubmit }
-      onChange={ handleChange }
-      ref={ formEl }
-    >
-      <FormToolbar>
-        <Button buttonType="fill" type="submit">{ mode === "view" ? "Edit" : "Submit" }</Button>
-        <Button buttonType="text" onClick={ closeModal }>Cancel</Button>
-      </FormToolbar>
-    </StyledForm>
-  )
-}
-
-const ViewDeleted = ({ items, headers, recover, closeModal, datasetId }) => {
-  const [selected, setSelected] = useState([])
-
-  useEffect(() => () => setSelected([]), [ closeModal ])
-
-  const toggleItemSelection = id => {
-    const newSelected = selected.includes(id)
-      ? selected.filter(itemId => itemId !== id)
-      : [...selected, id]
-    setSelected(newSelected)
-  }
-
-  const handleRecover = () => {
-    axios.post(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}/recover-deleted`, { items: selected })
-    recover(items.filter(({ _id }) => selected.includes(_id)))
-    closeModal()
-  }
-  
-  const ItemCheck = ({ id }) => (
-    <TD className="sticky">
-      <input
-        type="checkbox"
-        checked={ selected.includes(id) }
-        onChange={ () => toggleItemSelection(id) }
-      />
-    </TD>
-  )
-  const ItemDate = ({ date }) => (
-    <TD className="sticky sticky-date">
-      { new Date(date).toLocaleDateString(undefined, {
-        month: 'short', day: 'numeric', year: 'numeric'
-      }) }
-    </TD>
-  )
-  const SelectAll = () => (
-    <input
-      type="checkbox"
-      checked={ selected.length }
-      onChange={ () => setSelected(selected.length ? [] : items.map(({_id}) => _id)) }
-    />
-  )
-  return (
-    <div>
-      <DeletedTableWrap>
-        <DeletedTable>
-          <thead>
-            <TR>
-              <TH className="empty-header">
-                <SelectAll />
-              </TH>
-              <TH className="deleted-on-header">Deleted On</TH>
-              { headers.map(header => <TH key={ header.id }>{ header.title }</TH>) }
-            </TR>
-          </thead>
-          <tbody>
-            { items.map((item, rowIndex) => (
-              <TR key={ rowIndex } selected={ selected.includes(item._id) }>
-                <ItemCheck id={ item._id } />
-                <ItemDate date={ item.deleted_on } />
-                { headers.map(({ id }, colIndex) => <TD key={ `${rowIndex}/${colIndex}` }>{ JSON.stringify(item.data_values[id]) }</TD>) }
-              </TR>
-            ))}
-          </tbody>
-        </DeletedTable>
-      </DeletedTableWrap>
-      {/* <SelectAll /> */}
-      <FormToolbar>
-        <Button buttonType="fill" onClick={ handleRecover }>Recover { selected.length } items</Button>
-        <Button buttonType="text" onClick={ closeModal }>Cancel</Button>
-      </FormToolbar>
-    </div>
-  )
-}
-
-const demoFilters = [
-  ["e732b6cd-2443-4f4a-bced-00727c68ca3f", -1],
-  ["c390ea58-971d-4b54-9101-576fdb32be47", "> 0"],
-  ["5656902a-3ab5-4304-a1e1-429bdc1cac82", "= true"]
-]
 
 const filterOperators = {
   "=": check => val => placeholderIfNull(val).toString() === check,
@@ -496,7 +190,7 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
   const [ {details, template}, setDataset ] = useState({})
   const [ items, setItems ] = useState()
   const [ hasDeleted, setHasDeleted ] = useState()
-  const [ filters, setFilters ] = useState(demoFilters)
+  const [ filters, setFilters ] = useState([])
 
   const [ filterCol, filterRow ] = useMemo(() => getFilterFunction(filters), [ filters ])
 
@@ -536,56 +230,32 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
   const modalActions = useModal({
     addItem: AddItemForm,
     editDetails: EditDetailsForm,
-    viewDeleted: ViewDeleted
+    viewDeleted: DeletedItems,
+    manageFilters: ManageFilters
   })[1]
   
-  const itemSubmit = useCallback((newItem) => {
-    setItems([...items, newItem])
-    modalActions.close()
-  }, [ items, setItems, modalActions ])
-
   const addItemAction = () => {
-    const data = {
-      closeModal: () => modalActions.close(),
-      onSubmit: itemSubmit,
-      template,
-      datasetId
-    }
+    const onSubmit = item => setItems([...items, item])
+    const data = { onSubmit, template, datasetId }
     modalActions.open("addItem", data)
   }
 
-  const detailsSubmit = useCallback((newDetails) => {
-    modalActions.close()
-    setDataset({
-      template,
-      details: {
-        ...details,
-        ...newDetails
-      }
-    })
-  }, [details, modalActions, template])
-  
   const editDetailsAction = (viewMode="edit") => {
-    const data = {
-      closeModal: () => modalActions.close(),
-      onSubmit: detailsSubmit,
-      datasetId,
-      details,
-      viewMode
-    }
+    const onSubmit = edit => setDataset({ template, details: { ...details, ...edit }})
+    const data = { onSubmit, datasetId, details, viewMode }
     modalActions.open("editDetails", data)
   }
 
   const viewDeleted = async () => {
-    const deleted = await axios.get(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}/deleted`)
-      .catch(console.error)
-    modalActions.open("viewDeleted", {
-      closeModal: () => modalActions.close(),
-      items: deleted.data.items,
-      headers: tableHeaders,
-      recover: recovered => setItems([...items, ...recovered].sort((a, b) => a.created_on - b.created_on)),
-      datasetId
-    })
+    const onSubmit = recovered => setItems([...items, ...recovered].sort((a, b) => a.created_on - b.created_on))
+    const data = { headers: tableHeaders, onSubmit, datasetId }
+    modalActions.open("viewDeleted", data)
+  }
+
+  const manageFilters = () => {
+    const onSubmit = newFilters => setFilters(newFilters)
+    const data = { template, filters, onSubmit }
+    modalActions.open("manageFilters", data)
   }
 
   const deleteRows = ([start, end]) => {
@@ -635,7 +305,7 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
       <FilterContainer>
         <div>Filters</div>
         { filters.map((filter, i) => <FilterFlag key={ i } {...{ filter }} />) }
-        <button className="add-filter"><span>+</span> Add Filter</button>
+        <button className="add-filter" onClick={ manageFilters }><span>+</span> Add Filter</button>
       </FilterContainer>
     )
   }

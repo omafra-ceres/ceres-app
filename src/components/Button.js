@@ -39,6 +39,12 @@ const fillButtonStyle = css`
   background: ${p => p.theme.blue};
   border-color: ${p => p.theme.blue};
   color: white;
+
+  &:disabled {
+    background: #ddd;
+    border-color: #ddd;
+    color: #aaa;
+  }
 `
 
 const buttonsStyles = {
