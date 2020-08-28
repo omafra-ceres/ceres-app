@@ -25,7 +25,7 @@ const Page = styled.div`
 
 const TitleBarContainer = styled.div`
   display: flex;
-  padding: 10px 25px 12px;
+  padding: 10px 25px 0;
 
   > h1 {
     font-size: ${ p => p.theme.headerSize };
@@ -71,10 +71,13 @@ const FormToolbar = styled.div`
 `
 
 const ActionContainer = styled.div`
-  border-top: 2px solid #ddd;
   display: flex;
   flex-direction: row;
   padding: 0 10px;
+
+  & + & {
+    border-top: 2px solid #ddd;
+  }
 
   > button {
     border: none;
@@ -613,7 +616,9 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
 
   const FilterFlag = useCallback(({ filter }) => {
     const [ col, val ] = filter
-    const { title } = template.properties[col]
+    const { title } = template.properties[col] || {}
+
+    if (!title) return ""
     
     let filterString = [1, -1].includes(val)
       ? `${val === 1 ? "Show" : "Hide"} '${title}'`
