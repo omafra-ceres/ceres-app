@@ -151,48 +151,169 @@ const TitleBar = ({ title, openDetails }) => {
   )
 }
 
-const filterOperators = {
-  "=": check => val => placeholderIfNull(val).toString() === check,
-  ">": check => val => (placeholderIfNull(val, 1) * 1) > check,
-  "<": check => val => (placeholderIfNull(val, 1) * 1) < check
+// const filterOperators = {
+//   "=": check => val => placeholderIfNull(val).toString() === check,
+//   "!=": check => val => placeholderIfNull(val).toString() !== check,
+//   ">": check => val => (placeholderIfNull(val, 1) * 1) > check,
+//   "<": check => val => (placeholderIfNull(val, 1) * 1) < check
+// }
+
+const queryOperators = {
+  "=": {
+    label: "is",
+    check: check => val => placeholderIfNull(val).toString() === check,       
+  },
+  "!=": {
+   label: "is not",
+    check: check => val => placeholderIfNull(val).toString() !== check,       
+  },
+  ">": {
+    label: "greater than",
+    check: check => val => (placeholderIfNull(val, 1) * 1) > check,       
+  },
+  "<": {
+    label: "less than",
+    check: check => val => (placeholderIfNull(val, 1) * 1) < check       
+  }
 }
 
-const getFilterFunction = filtersArray => {
-  const includes = []
-  const excludes = []
-  const query = {}
-  filtersArray.forEach(filter => {
-    const [col, val] = filter
-    if ([1, -1].includes(val)) {
-      (val === 1 ? includes : excludes).push(col)
-    } else {
-      const operator = val[0]
-      const check = val.slice(2)
-      query[col] = filterOperators[operator](check)
-    }
-  })
+const sortByType = {
+  number: {
+    "1": { label: "1 - 9", sort: (a, b) => a - b },
+    "-1": { label: "9 - 1", sort: (a, b) => b - a }
+  },
+  string: {
+    "1": { label: "A - Z", sort: (a, b) => a.localeCompare(b) },
+    "-1": { label: "Z - A", sort: (a, b) => b.localeCompare(a) }
+  },
+  boolean: {
+    "1": { label: "F - T", sort: (a, b) => a - b },
+    "-1": { label: "T - F", sort: (a, b) => b - a }
+  }
+}
 
-  const checkCol = col => {
-    const checkIncludes = !includes.length || includes.includes(col)
-    const checkExcludes = !excludes.length || !excludes.includes(col)
-    return checkIncludes && checkExcludes
+const getFilterFunctions = (filtersObject, template) => {
+  const { projection={}, sort={}, query={} } = filtersObject
+  
+  const getProjection = columns => {
+    if (!projection.op) return columns
+    
+    return Object.keys(columns).filter(key => {
+      const isIn = projection.columns.includes(key)
+      return projection.op === 1 ? isIn : !isIn
+    }).reduce((obj, key) => ({...obj, [key]: columns[key]}), {})
+  }
+
+  const sortRows = rows => {
+    if (!Object.keys(sort).length) return rows
+
+    const columns = Object.keys(sort).map(col => {
+      const { type } = template.properties[col]
+      const func = sortByType[type][sort[col]].sort
+      return { col, func }
+    })
+    
+    return rows.sort((row1, row2) => {
+      const row1Items = row1.data_values
+      const row2Items = row2.data_values
+      
+      let order = 0, index = 0, done = false
+      while (index < columns.length && !done) {
+        const { col, func } = columns[index]
+        const check = func(row1Items[col], row2Items[col])
+        if (check) {
+          order = check
+          done = true
+        }
+        index++
+      }
+      return order
+    })
+  }
+
+  const filterRows = rows => {
+    if (!Object.keys(query)) return rows
+    
+    const queries = Object.keys(query).map(col => {
+      const [op, check] = query[col].split(/ (.+)/)
+      const func = queryOperators[op].check(check)
+      return { col, func }
+    })
+    
+    return rows.filter(row => (
+      queries.every(que => que.func(row.data_values[que.col]))
+    ))
+  }
+
+  const filterAndSortRows = rows => sortRows(filterRows(rows))
+
+  return [ getProjection, filterAndSortRows ]
+}
+
+const getFilterList = (filters, template) => {
+  const { projection, sort, query } = filters
+  const { properties } = template
+  const filterList = []
+  
+  if (projection && (projection.columns || []).length) {
+    const op = projection.op === 1 ? "Show" : "Hide"
+    const label = projection.columns.length > 1
+      ? `${projection.columns.length} columns`
+      : `${properties[projection.columns[0]].title}`
+    filterList.push({type: "projection", label: `${op} ${label}`})
   }
   
-  const checkRow = row => {
-    const cols = Object.keys(query)
-    const checkQuery = cols.map(col => query[col](row[col])).every(check => !!check)
-    return checkQuery
+  if (sort) {
+    Object.keys(sort).forEach(col => {
+      const { title, type } = properties[col]
+      const label = sortByType[type][sort[col]].label
+      filterList.push({type: "sort", column: col, label: `Sort ${title} ${label}`})
+    })
   }
-  return [ checkCol, checkRow ]
+
+  if (query) {
+    Object.keys(query).forEach(col => {
+      const { title } = properties[col]
+      const [op, check] = query[col].split(/ (.+)/)
+      const label = queryOperators[op].label
+      filterList.push({type: "query", column: col, label: `${title} ${label} ${check}`})
+    })
+  }
+
+  return filterList
+}
+
+const demoFilter = {
+  projection: {
+    op: -1,
+    columns: ["5656902a-3ab5-4304-a1e1-429bdc1cac82"]
+  },
+  sort: {
+    "c390ea58-971d-4b54-9101-576fdb32be47": 1
+  },
+  query: {
+    "43ad40b9-9810-44a3-8c07-08b98a6fdccb": "!= Trevor",
+    "c390ea58-971d-4b54-9101-576fdb32be47": "> 0"
+  }
+}
+
+const removeFilter = (filters, type, column) => {
+  const newFilters = JSON.parse(JSON.stringify(filters))
+  if (type === "projection") {
+    newFilters.projection.columns = []
+  } else {
+    delete newFilters[type][column]
+  }
+  return newFilters
 }
 
 const DataShow = ({ location: { pathname: datasetId }}) => {
   const [ {details, template}, setDataset ] = useState({})
   const [ items, setItems ] = useState()
   const [ hasDeleted, setHasDeleted ] = useState()
-  const [ filters, setFilters ] = useState([])
+  const [ filters, setFilters ] = useState(demoFilter)
 
-  const [ filterCol, filterRow ] = useMemo(() => getFilterFunction(filters), [ filters ])
+  const [ getProjection, filterAndSortRows ] = useMemo(() => getFilterFunctions(filters || {}, template), [ filters, template ])
 
   useEffect(() => {
     axios.get(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}`)
@@ -206,26 +327,27 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
 
   const tableHeaders = useMemo(() => {
     if (!template) return
-    const keys = Object.keys(template.properties).filter(filterCol)
-    return keys.map(key => ({
+    const columns = getProjection(template.properties)
+    return Object.keys(columns).map(key => ({
       id: key,
       required: template.required.includes(key),
       ...template.properties[key]
     }))
-  }, [template, filterCol])
+  }, [template, getProjection])
 
   const tableItems = useMemo(() => {
     if (!tableHeaders || !items) return
     const itemArr = []
-    items.filter(item => filterRow(item.data_values)).forEach(item => {
-      const rowArr = []
-      tableHeaders.forEach(header => {
-        rowArr.push(item.data_values[header.id])
+    filterAndSortRows(items)
+      .forEach(item => {
+        const rowArr = []
+        tableHeaders.forEach(header => {
+          rowArr.push(item.data_values[header.id])
+        })
+        itemArr.push(rowArr)
       })
-      itemArr.push(rowArr)
-    })
     return itemArr
-  }, [items, tableHeaders, filterRow])
+  }, [items, tableHeaders, filterAndSortRows])
   
   const modalActions = useModal({
     addItem: AddItemForm,
@@ -285,26 +407,19 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
   )
 
   const FilterFlag = useCallback(({ filter }) => {
-    const [ col, val ] = filter
-    const { title } = template.properties[col] || {}
-
-    if (!title) return ""
+    const { label, type, column } = filter
     
-    let filterString = [1, -1].includes(val)
-      ? `${val === 1 ? "Show" : "Hide"} '${title}'`
-      : `'${title}' ${val}`
-    
-    const handleClick = () => setFilters(filters.filter(f => f !== filter))
+    const handleClick = () => setFilters(removeFilter(filters, type, column))
     return (
-      <Flag onClick={ handleClick }><RemoveFlag>✕</RemoveFlag>{ filterString }</Flag>
+      <Flag onClick={ handleClick }><RemoveFlag>✕</RemoveFlag>{ label }</Flag>
     )
-  }, [ template, filters ])
+  }, [ filters ])
 
   const FilterBar = () => {
     return (
       <FilterContainer>
         <div>Filters</div>
-        { filters.map((filter, i) => <FilterFlag key={ i } {...{ filter }} />) }
+        { getFilterList(filters, template).map((filter, i) => <FilterFlag key={ i } {...{ filter }} />) }
         <button className="add-filter" onClick={ manageFilters }><span>+</span> Add Filter</button>
       </FilterContainer>
     )
