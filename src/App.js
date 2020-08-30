@@ -1,10 +1,12 @@
 import React from 'react'
-import { BrowserRouter as Router, Route, Switch } from 'react-router-dom'
+import { BrowserRouter as Router, Route, Switch, Redirect } from 'react-router-dom'
+import { Auth0Provider, useAuth0 } from "@auth0/auth0-react"
 import styled, { ThemeProvider, css } from 'styled-components'
 
 import DataIndex from './pages/DataIndex'
 import DataCreate from './pages/DataCreate'
 import DataShow from './pages/DataShow'
+import Login from './pages/Login'
 import Header from './components/Header'
 
 import Modal from './components/Modal'
@@ -50,30 +52,59 @@ const Container = styled.div`
   }
 `
 
-function App() {
-  // const handleContextMenu = e => {
-  //   const { target: { dataset }, clientX, clientY } = e
-  //   const { contextmenu: menu, contextdata: data } = dataset
-  //   if (menu) {
-  //     e.preventDefault()
-  //     console.log(data)
-  //   }
-  // }
+const PrivateRoute = ({ component: Page, ...innerProps }) => {
+  const { isAuthenticated, isLoading } = useAuth0()
   return (
-    <Router>
-      <ThemeProvider theme={ theme }>
-        <Container>
-          <Header />
-          <Switch>
-            <Route path="/" exact component={ DataIndex } />
-            <Route path="/create" component={ DataCreate } />
-            <Route path="/:dataset" component={ DataShow } />
-          </Switch>
-        </Container>
-        <Modal />
-        <ContextMenu />
-      </ThemeProvider>
-    </Router>
+    <Route
+      { ...innerProps }
+      render={ props => isLoading
+        ? "loading"
+        : isAuthenticated
+          ? <Page  {...props } />
+          : <Redirect to={{ pathname: "/login", state: { from: props.location }}} />
+      }
+    />
+  )
+}
+
+const LoginRoute = ({ component: Page, ...innerProps }) => {
+  const { isAuthenticated, isLoading } = useAuth0()
+  return (
+    <Route
+      { ...innerProps }
+      render={ props => isLoading
+        ? "loading"
+        : isAuthenticated
+          ? <Redirect to="/" />
+          : <Page  {...props } />
+      }
+    />
+  )
+}
+
+function App() {
+  return (
+    <Auth0Provider
+      domain={ process.env.REACT_APP_AUTH_DOMAIN }
+      clientId={ process.env.REACT_APP_AUTH_CLIENT_ID }
+      redirectUri={ window.location.origin }
+    >
+      <Router>
+        <ThemeProvider theme={ theme }>
+          <Container>
+            <Header />
+            <Switch>
+              <LoginRoute path="/login" component={ Login } />
+              <PrivateRoute path="/" exact component={ DataIndex } />
+              <PrivateRoute path="/create" component={ DataCreate } />
+              <PrivateRoute path="/:dataset" component={ DataShow } />
+            </Switch>
+          </Container>
+          <Modal />
+          <ContextMenu />
+        </ThemeProvider>
+      </Router>
+    </Auth0Provider>
   )
 }
 

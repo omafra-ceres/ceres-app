@@ -1,6 +1,10 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
+import { useAuth0 } from '@auth0/auth0-react'
+
+import LoginButton from './LoginButton'
+import LogoutButton from './LogoutButton'
 
 const StyledHeader = styled.header`
   align-items: center;
@@ -23,10 +27,6 @@ const StyledHeader = styled.header`
     margin: 0;
     text-transform: uppercase;
   }
-  
-  ul {
-    list-style: none;
-  }
 
   a {
     color: inherit;
@@ -34,14 +34,36 @@ const StyledHeader = styled.header`
   }
 `
 
+const NavList = styled.ul`
+  display: flex;
+  flex-direction: row;
+  list-style: none;
+
+  > li {
+    margin-right: 20px;
+
+    &:last-child {
+      margin-right: 0;
+    }
+  }
+`
+
 const Header = () => {
+  const { user, isAuthenticated, isLoading } = useAuth0()
   return (
     <StyledHeader>
       <h1>Ceres (demo)</h1>
       <nav>
-        <ul>
-          <li><Link to="/" className="nav-link">My Datasets</Link></li>
-        </ul>
+        <NavList>
+          { isLoading ? "" : isAuthenticated ? (
+            <>
+              <li><Link to="/" className="nav-link">My Datasets</Link></li>
+              <li><LogoutButton /></li>
+            </>
+          ) : (
+            <li><LoginButton /></li>
+          )}
+        </NavList>
       </nav>
     </StyledHeader>
   )
