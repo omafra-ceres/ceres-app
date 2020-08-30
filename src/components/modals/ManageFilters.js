@@ -6,6 +6,14 @@ import Input from '../InputContainer'
 
 import useModal from '../../customHooks/useModal'
 
+import { addFilter, removeFilter, getFilterList } from '../../utils'
+
+
+////////////////////////////////////////
+//////                            //////
+//////      Component Styles      //////
+//////                            //////
+
 const Container = styled.div`
   color: #333;
   width: 350px;
@@ -29,7 +37,9 @@ const FilterList = styled.div`
 `
 
 const FilterItem = styled.div`
+  cursor: default;
   display: flex;
+  width: fit-content;
   
   &:not(:last-child) {
     margin-bottom: 10px;
@@ -54,11 +64,13 @@ const FilterX = styled.button`
   border: 1px solid transparent;
   background: none;
   border-radius: 4px;
+  color: #aaa;
   font-size: 20px;
   margin-right: 10px;
 
   *:hover > &, *:focus-within > & {
     background: #eee;
+    color: #333;
     outline: none;
   }
 
@@ -97,7 +109,7 @@ const AddButton = styled(Button).attrs(() => ({
   buttonType: "text"
 }))`
   font-size: 14px;
-  margin: 15px 0 0;
+  margin: 20px 0 0;
   min-width: unset;
   padding: 5px 5px 5px 40px;
   position: relative;
@@ -116,13 +128,33 @@ const AddButton = styled(Button).attrs(() => ({
   &:active {
     background: #ddd;
   }
+
+  &:nth-child(2) {
+    margin-top: 0;
+  }
+`
+
+const OpDisplay = styled.div`
+  bottom: 1px;
+  box-sizing: border-box;
+  display: inline-block;
+  font-weight: bold;
+  left: 1px;
+  position: relative;
+  text-align: center;
+  width: 20px;
 `
 
 const BuildContainer = styled.div`
   border: 1px solid #ddd;
   border-radius: 4px;
   margin-top: 10px;
-  padding: 0 10px 10px;
+  padding: 10px;
+
+  > ${ModalTitle} {
+    font-size: 16px;
+    margin-bottom: 10px;
+  }
 
   > .filter-option {
     margin-top: 5px;
@@ -130,8 +162,7 @@ const BuildContainer = styled.div`
 
   > .filter-condition {
     display: inline-block;
-    margin-right: 10px;
-    width: 185px;
+    width: 175px;
   }
 
   > .filter-check {
@@ -144,25 +175,33 @@ const BuildContainer = styled.div`
       width: 133px;
     }
   }
+
+  > ${FormToolbar} {
+    margin-top: 15px;
+  }
 `
 
-const queryOperators = {
-  "=": "equal to",
-  ">": "greater than",
-  "<": "less than"
-}
+//////                            //////
+//////      Component Styles      //////
+//////                            //////
+////////////////////////////////////////
 
-const ManageFilters = ({ template, filters=[], onSubmit }) => {
+
+const ManageFilters = ({ template, filters={}, onSubmit }) => {
   const [ newFilters, setNewFilters ] = useState(filters)
   const [ buildIsOpen, setBuildIsOpen ] = useState(false)
   const { close } = useModal()[1]
 
   useEffect(() => {
     setNewFilters(filters)
-    return () => setNewFilters(filters)
+    setBuildIsOpen(false)
+    return () => {
+      setNewFilters(filters)
+      setBuildIsOpen(false)
+    }
   }, [ filters, onSubmit ])
 
-  const BuildFilter = () => {
+  const BuildFilter = ({ noClose }) => {
     const [column, setColumn] = useState()
     const [condition, setCondition] = useState()
     const [check, setCheck] = useState("")
@@ -171,13 +210,13 @@ const ManageFilters = ({ template, filters=[], onSubmit }) => {
     useEffect(() => { setCheck("") }, [ condition ])
 
     const numberConditions = [
-      { value: ">", label: "is greater than" },
-      { value: "<", label: "is less than" }
+      { value: { type: "query", op: ">" }, label: "is greater than" },
+      { value: { type: "query", op: "<" }, label: "is less than" }
     ]
     
     const conditions = [
-      { value: -1, label: "Hide column" },
-      { value: "=", label: "is equal to" },
+      { value: { type: "projection", op: -1 }, label: "Hide column" },
+      { value: { type: "query", op: "=" }, label: "is equal to" },
     ]
 
     const filterConditions = {
@@ -205,18 +244,16 @@ const ManageFilters = ({ template, filters=[], onSubmit }) => {
     }
 
     const handleAdd = () => {
-      const newFilter = [
-        column.value,
-        condition.value === -1
-          ? condition.value
-          : `${condition.value} ${check.value ? check.value : check}`
-      ]
-      setNewFilters([...newFilters, newFilter])
+      const filterType = condition.value.type
+      const filterColumn = column.value
+      const filterOp = `${condition.value.op} ${check.value ? check.value : check}`
+      setNewFilters(addFilter(newFilters, filterType, filterColumn, filterOp))
       closeBuild()
     }
     
     return (
       <BuildContainer>
+        <ModalTitle>Add Filter</ModalTitle>
         <Input
           id="column-select"
           label="Column"
@@ -239,54 +276,38 @@ const ManageFilters = ({ template, filters=[], onSubmit }) => {
             onChange={ setCondition }
           />
         : "" }
-        { condition && condition.value !== -1 ?
-          <Input
-            id="filter-check"
-            value={ check }
-            required={ true }
-            className="filter-option filter-check"
-            type={ checkType[columnType] }
-            onChange={ checkOnChange }
-            { ...columnType === "boolean" && { options: checkBooleanOptions }}
-          />
+        { condition && condition.value.type !== "projection" ?
+          <>
+            <OpDisplay>{ condition.value.op }</OpDisplay>
+            <Input
+              id="filter-check"
+              value={ check }
+              required={ true }
+              className="filter-option filter-check"
+              type={ checkType[columnType] }
+              onChange={ checkOnChange }
+              { ...columnType === "boolean" && { options: checkBooleanOptions }}
+            />
+          </>
         : "" }
-        <FormToolbar style={{ marginTop: "5px" }}>
-          <Button disabled={ !(column && condition && (condition.value === -1 || check)) } buttonType="fill" onClick={ handleAdd }>Save</Button>
-          <Button buttonType="text" onClick={ closeBuild }>Cancel</Button>
+        <FormToolbar>
+          <Button disabled={ !(column && condition && (condition.value.type === "projection" || check)) } buttonType="fill" onClick={ handleAdd }>Add</Button>
+          { noClose ? "" : <Button buttonType="text" onClick={ closeBuild }>Cancel</Button> }
         </FormToolbar>
       </BuildContainer>
     )
   }
 
-  const removeFilter = item => setNewFilters(newFilters.filter(filter => filter !== item))
-
   const FilterDisplay = ({ filter }) => {
-    const [ col, val ] = filter
-    const { title } = template.properties[col] || {}
-    const filterType = [1, -1].includes(val) ? "projection" : "query"
-    let operator, check
-    if (filterType === "query") {
-      operator = queryOperators[val[0]]
-      check = val.slice(2)
-    }
-
-    if (!title) return ""
-    
-    const FilterContents = () => {
-      const action = filterType === "projection" ? val === 1 ? "Show column" : "Hide column" : "Filter"
-      const column = <strong>{ title }</strong>
-      const query = <> where {operator} <strong>{check}</strong></>
-      return <Flag>{ action } { column }{ filterType === "query" ? query : "" }</Flag>
-    }
-
-    const onClick = () => removeFilter(filter)
-
-    const RemoveFilter = () => (
-      <FilterX {...{ onClick }}>✕</FilterX>
-    )
+    const { type, column, html } = filter
+    const onClick = () => setNewFilters(removeFilter(newFilters, type, column))
+    const RemoveFilter = () => <FilterX {...{ onClick }}>✕</FilterX>
     
     return (
-      <FilterItem {...{ onClick }}><RemoveFilter /><FilterContents /></FilterItem>
+      <FilterItem {...{ onClick }}>
+        <RemoveFilter />
+        <Flag>{ html }</Flag>
+      </FilterItem>
     )
   }
 
@@ -295,18 +316,18 @@ const ManageFilters = ({ template, filters=[], onSubmit }) => {
     close()
   }
 
+  const list = getFilterList(newFilters, template, true).map((item, i) => <FilterDisplay key={ i } filter={ item } />)
+
   return (
     <Container>
-      <ModalTitle>Filters</ModalTitle>
-      <FilterList>
-        { newFilters.map(filter => <FilterDisplay {...{ filter }} />) }
-      </FilterList>
-      { buildIsOpen
-        ? <BuildFilter />
-        : <AddButton onClick={ () => setBuildIsOpen(true) }><Plus />Add Filter</AddButton>
+      <ModalTitle>Manage Filters</ModalTitle>
+      { list.length ? <FilterList>{ list }</FilterList> : "" }
+      { buildIsOpen || !list.length
+        ? <BuildFilter noClose={ !list.length } />
+        : <AddButton onClick={ () => setBuildIsOpen(true) }><Plus />Add filter</AddButton>
       }
       <FormToolbar>
-        <Button disabled={ newFilters === filters || buildIsOpen } buttonType="fill" onClick={ handleSave }>Save Filters</Button>
+        <Button disabled={ newFilters === filters || buildIsOpen } buttonType="fill" onClick={ handleSave }>Save filters</Button>
         <Button buttonType="text" onClick={ close }>Cancel</Button>
       </FormToolbar>
     </Container>
