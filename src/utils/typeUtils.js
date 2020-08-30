@@ -6,6 +6,12 @@ const callIfFunction = (value, ...args) => {
   return value(...args)
 }
 
+const placeholderIfNull = (value, placeholder="") => {
+  if (value == null) return placeholder
+  return value
+}
+
 export {
-  callIfFunction
+  callIfFunction,
+  placeholderIfNull
 }
