@@ -40,7 +40,7 @@ const AddItemForm = ({ template={}, datasetId, onSubmit=(() => {}) }) => {
 
   const { close } = useModal()[1]
 
-  useEffect(() => () => setNewItem({}), [ close ])
+  useEffect(() => () => setNewItem({}), [ onSubmit ])
 
   useEffect(() => {
     if (!template.properties) return
@@ -54,7 +54,7 @@ const AddItemForm = ({ template={}, datasetId, onSubmit=(() => {}) }) => {
 
   useEffect(() => {
     addItemFormEl.current.formElement[0].focus()
-  }, [ close ])
+  }, [ onSubmit ])
 
   const handleSubmit = ({formData}) => {
     axios.post(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}/addItem`, formData)

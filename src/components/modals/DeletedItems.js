@@ -81,7 +81,7 @@ const DeletedItems = ({ headers, onSubmit, datasetId }) => {
   const [selected, setSelected] = useState([])
   const { close } = useModal()[1]
 
-  useEffect(() => () => setSelected([]), [ close ])
+  useEffect(() => () => setSelected([]), [ onSubmit ])
 
   useEffect(() => {
     const url = `${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}/deleted`
