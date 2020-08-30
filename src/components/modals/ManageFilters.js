@@ -215,6 +215,7 @@ const ManageFilters = ({ template, filters={}, onSubmit }) => {
     ]
     
     const conditions = [
+      { value: { type: "sort", op: "" }, label: "Sort column" },
       { value: { type: "projection", op: -1 }, label: "Hide column" },
       { value: { type: "query", op: "=" }, label: "is equal to" },
     ]
@@ -225,14 +226,41 @@ const ManageFilters = ({ template, filters={}, onSubmit }) => {
       number: [...conditions, ...numberConditions]
     }
 
-    const columnType = column ? template.properties[column.value].type : ""
-    const checkType = {
+    const sortOptions = {
+      "string": [
+        {value: 1, label: "A - Z"},
+        {value: -1, label: "Z - A"}
+      ],
+      "number": [
+        {value: 1, label: "1 - 9"},
+        {value: -1, label: "9 - 1"}
+      ],
+      "boolean": [
+        {value: 1, label: "F - T"},
+        {value: -1, label: "T - F"}
+      ]
+    }
+
+    const checkTypes = {
       "string": "text",
       "number": "number",
       "boolean": "select"
     }
-    const checkOnChange = columnType !== "boolean" ? ({ target: { value }}) => setCheck(value) : setCheck
-    const checkBooleanOptions = [{ value: "true", label: "TRUE" }, { value: "false", label: "FALSE" }]
+
+    const checkBooleanOptions = [
+      { value: "true", label: "TRUE" },
+      { value: "false", label: "FALSE" }
+    ]
+
+    const columnType = column ? template.properties[column.value].type : ""
+    const checkType = condition && condition.value.type === "sort" ? "select" : checkTypes[columnType]
+    const checkOptions = condition && condition.value.type === "sort"
+      ? sortOptions[columnType]
+      : columnType === "boolean"
+        ? checkBooleanOptions
+        : null
+
+    const checkOnChange = !checkOptions ? ({ target: { value }}) => setCheck(value) : setCheck
     
     const columns = Object.keys(template.properties).map(key => ({ value: key, label: template.properties[key].title }))
 
@@ -246,7 +274,9 @@ const ManageFilters = ({ template, filters={}, onSubmit }) => {
     const handleAdd = () => {
       const filterType = condition.value.type
       const filterColumn = column.value
-      const filterOp = `${condition.value.op} ${check.value ? check.value : check}`
+      const filterOp = ["sort", "projection"].includes(filterType)
+        ? filterType === "sort" ? check.value : condition.value.op
+        : `${condition.value.op} ${check.value ? check.value : check}`
       setNewFilters(addFilter(newFilters, filterType, filterColumn, filterOp))
       closeBuild()
     }
@@ -284,9 +314,9 @@ const ManageFilters = ({ template, filters={}, onSubmit }) => {
               value={ check }
               required={ true }
               className="filter-option filter-check"
-              type={ checkType[columnType] }
+              type={ checkType }
               onChange={ checkOnChange }
-              { ...columnType === "boolean" && { options: checkBooleanOptions }}
+              { ...checkOptions && { options: checkOptions }}
             />
           </>
         : "" }
