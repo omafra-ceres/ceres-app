@@ -88,6 +88,8 @@ function App() {
       domain={ process.env.REACT_APP_AUTH_DOMAIN }
       clientId={ process.env.REACT_APP_AUTH_CLIENT_ID }
       redirectUri={ window.location.origin }
+      audience={ process.env.REACT_APP_AUTH_AUDIENCE }
+      scope="read:current_user update:current_user_metadata"
     >
       <Router>
         <ThemeProvider theme={ theme }>

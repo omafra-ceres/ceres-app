@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
-import axios from 'axios'
 import styled from 'styled-components'
 import { Link } from 'react-router-dom'
 
-import { Select } from '../components/InputContainer'
+import useAPI from '../customHooks/useAPI'
 
 const CreateDataStructureLink = styled(Link)`
   background: ${ p => p.theme.blue };
@@ -13,21 +12,6 @@ const CreateDataStructureLink = styled(Link)`
   display: inline-block;
   padding: 10px 15px;
   text-decoration: none;
-`
-
-const DeleteDataStructureButton = styled.button`
-  background: none;
-  border: none;
-  color: red;
-  font-size: 14px;
-  font-weight: bold;
-  padding: 10px;
-  width: 75px;
-
-  &:hover {
-    text-decoration: underline;
-    text-underline-position: under;
-  }
 `
 
 const DataStructureListContainer = styled.ul`
@@ -93,15 +77,6 @@ const DatasetTitle = styled.span`
   word-wrap: none;
 `
 
-const DatasetStatus = styled.span`
-  background: #e8e8e8;
-  border-radius: 1px;
-  font-size: 10px;
-  font-weight: bold;
-  justify-self: flex-start;
-  padding: 6px 10px;
-`
-
 const Page = styled.div`
   max-width: 1000px;
   margin: 0 auto;
@@ -124,11 +99,6 @@ const ListHeader = styled.div`
   flex-direction: row;
   justify-content: space-between;
   padding-bottom: 20px;
-`
-
-const StatusSelect = styled(Select)`
-  align-self: flex-end;
-  width: 200px;
 `
 
 const PlaceholderLiContainer = styled.div`
@@ -219,6 +189,7 @@ const DataIndex = () => {
   const [dataStructures, setDataStructures] = useState([])
   const [ menuState, setMenuState ] = useState({})
   const menuContainer = useRef()
+  const api = useAPI()
 
   useEffect(() => {
     if (menuState.isOpen) {
@@ -227,19 +198,12 @@ const DataIndex = () => {
   }, [ menuState ])
 
   useEffect(() => {
-    axios.get(`${process.env.REACT_APP_API_URL}/data`)
+    api.get(`/data`)
       .then(res => {
         setDataStructures(res.data)
       })
       .catch(console.error)
-  },[])
-
-  const handleDelete = (e, dataStructure) => {
-    e.preventDefault()
-    axios.post(`${process.env.REACT_APP_API_URL}/data/delete`, dataStructure)
-      .then(res => setDataStructures(res.data))
-      .catch(console.error)
-  }
+  },[ api ])
 
   const closeMenu = () => {
     setMenuState({ isOpen: false })
@@ -302,13 +266,13 @@ const DataIndex = () => {
 
   const itemActions = {
     archive: () => {
-      axios.post(`${process.env.REACT_APP_API_URL}/data/archive`, menuState.dataset)
+      api.post(`/data/archive`, menuState.dataset)
         .then(() => {
           setDataStructures(dataStructures.filter(set => set !== menuState.dataset))
         })
         .catch(console.error)
     }, unarchive: () => {
-      axios.post(`${process.env.REACT_APP_API_URL}/data/unarchive`, menuState.dataset)
+      api.post(`/data/unarchive`, menuState.dataset)
         .then(() => {
           setDataStructures(dataStructures.filter(set => set !== menuState.dataset))
         })

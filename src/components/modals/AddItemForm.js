@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react'
 import styled from 'styled-components'
-import axios from 'axios'
 
 import Form from '../CustomForm'
 import Button from '../Button'
 
+import useAPI from '../../customHooks/useAPI'
 import useModal from '../../customHooks/useModal'
 
 const StyledForm = styled(Form)`
@@ -37,6 +37,7 @@ const FormToolbar = styled.div`
 const AddItemForm = ({ template={}, datasetId, onSubmit=(() => {}) }) => {
   const [newItem, setNewItem] = useState({})
   const addItemFormEl = useRef()
+  const api = useAPI()
 
   const { close } = useModal()[1]
 
@@ -57,7 +58,7 @@ const AddItemForm = ({ template={}, datasetId, onSubmit=(() => {}) }) => {
   }, [ onSubmit ])
 
   const handleSubmit = ({formData}) => {
-    axios.post(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}/addItem`, formData)
+    api.post(`/data/${datasetId.slice(1)}/addItem`, formData)
       .then(res => {
         onSubmit(res.data.item)
         close()

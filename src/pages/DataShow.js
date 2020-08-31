@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import styled from 'styled-components'
-import axios from 'axios'
 
 import Table from '../components/Table'
 import Button from '../components/Button'
 import { AddItemForm, EditDetailsForm, DeletedItems, ManageFilters } from '../components/modals'
 
+import useAPI from '../customHooks/useAPI'
 import useModal from '../customHooks/useModal'
 import { getRange, getFilterFunctions, removeFilter, getFilterList } from '../utils'
 
@@ -156,18 +156,19 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
   const [ items, setItems ] = useState()
   const [ hasDeleted, setHasDeleted ] = useState()
   const [ filters, setFilters ] = useState({})
+  const api = useAPI()
 
   const [ getProjection, filterAndSortRows ] = useMemo(() => getFilterFunctions(filters || {}, template), [ filters, template ])
 
   useEffect(() => {
-    axios.get(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}`)
+    api.get(`/data/${datasetId.slice(1)}`)
       .then(res => {
         const { details, items, template, hasDeleted } = res.data
         setDataset({ details, template })
         setItems(items)
         setHasDeleted(hasDeleted)
       }).catch(console.error)
-  },[ datasetId ])
+  },[ datasetId, api ])
 
   const tableHeaders = useMemo(() => {
     if (!template) return
@@ -229,7 +230,7 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
       .map(row => (items[row - 1] || {})._id)
       .filter(id => !!id)
     if (!rows.length) return
-    axios.post(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}/delete-items`, { items: rows })
+    api.post(`/data/${datasetId.slice(1)}/delete-items`, { items: rows })
       .then(() => {
         if (!hasDeleted) setHasDeleted(true)
         setItems(items.filter(item => !rows.includes(item._id)))

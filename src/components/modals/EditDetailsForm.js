@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import styled from 'styled-components'
-import axios from 'axios'
 
 import Form from '../CustomForm'
 import Button from '../Button'
 
+import useAPI from '../../customHooks/useAPI'
 import useModal from '../../customHooks/useModal'
 
 const StyledForm = styled(Form)`
@@ -45,6 +45,7 @@ const EditDetailsForm = ({ datasetId, onSubmit=(() => {}), details, viewMode }) 
   const [ mode, setMode ] = useState(viewMode)
   const [newDetails, setNewDetails] = useState(details)
   const formEl = useRef()
+  const api = useAPI()
 
   const { close } = useModal()[1]
 
@@ -68,7 +69,7 @@ const EditDetailsForm = ({ datasetId, onSubmit=(() => {}), details, viewMode }) 
     if (mode === "view") {
       setMode("edit")
     } else if (mode === "edit") {
-      axios.post(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}/update`, { name, description })
+      api.post(`/data/${datasetId.slice(1)}/update`, { name, description })
         .then(() => {
           onSubmit(newDetails)
           close()

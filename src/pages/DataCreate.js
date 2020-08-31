@@ -1,7 +1,8 @@
 import React from 'react'
 import styled from 'styled-components'
-import axios from 'axios'
 import { v4 as uuid } from 'uuid'
+
+import useAPI from '../customHooks/useAPI'
 
 import Form from '../components/CustomForm'
 
@@ -201,11 +202,12 @@ const generateTemplate = ({ details, template }) => {
 
 const DataCreate = () => {
   const [formData, setFormData] = React.useState(initialFormData)
+  const api = useAPI()
 
   const handleSubmit = async ({formData}) => {
     const { details } = formData
     const template = generateTemplate(formData)
-    const created = await axios.post(`${process.env.REACT_APP_API_URL}/data/create`, {
+    const created = await api.post(`/data/create`, {
       details,
       template
     }).catch(err => console.error(err))

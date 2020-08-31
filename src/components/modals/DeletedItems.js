@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import styled from 'styled-components'
-import axios from 'axios'
 
 import Button from '../Button'
 
+import useAPI from '../../customHooks/useAPI'
 import useModal from '../../customHooks/useModal'
 
 const TH = styled.th`
@@ -80,13 +80,14 @@ const DeletedItems = ({ headers, onSubmit, datasetId }) => {
   const [items, setItems] = useState([])
   const [selected, setSelected] = useState([])
   const { close } = useModal()[1]
+  const api = useAPI()
 
   useEffect(() => () => setSelected([]), [ onSubmit ])
 
   useEffect(() => {
-    const url = `${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}/deleted`
+    const url = `/data/${datasetId.slice(1)}/deleted`
     const getDeleted = async () => {
-      const res = await axios.get(url)
+      const res = await api.get(url)
       setItems(res.data.items)
     }
     getDeleted()
@@ -100,7 +101,7 @@ const DeletedItems = ({ headers, onSubmit, datasetId }) => {
   }
 
   const handleRecover = () => {
-    axios.post(`${process.env.REACT_APP_API_URL}/data/${datasetId.slice(1)}/recover-deleted`, { items: selected })
+    api.post(`/data/${datasetId.slice(1)}/recover-deleted`, { items: selected })
     onSubmit(items.filter(({ _id }) => selected.includes(_id)))
     close()
   }
