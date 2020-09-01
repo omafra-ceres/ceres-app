@@ -72,11 +72,11 @@ const defaultState = {
   actions: []
 }
 
-const MenuActionItem = ({ option }) =>(
+const MenuActionItem = ({ option }) => (
   <li {...option.disabled && {"aria-disabled": option.disabled}}>
     <ActionMenuItem
       disabled={ option.disabled }
-      onClick={ option.action }
+      onMouseDown={ option.action }
     >
       { option.label }
     </ActionMenuItem>

@@ -7,7 +7,7 @@ axios.defaults.baseURL = process.env.REACT_APP_API_URL
 let savedToken
 
 const useAPI = () => {
-  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0()
+  const { user, getIdTokenClaims, getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0()
   
   const gettingToken = useMemo(async () => {
     if (savedToken) return savedToken

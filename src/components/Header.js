@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 import { useAuth0 } from '@auth0/auth0-react'
 
-import LoginButton from './LoginButton'
+// import LoginButton from './LoginButton'
 import LogoutButton from './LogoutButton'
 
 const StyledHeader = styled.header`
@@ -49,7 +49,7 @@ const NavList = styled.ul`
 `
 
 const Header = () => {
-  const { user, isAuthenticated, isLoading } = useAuth0()
+  const { isAuthenticated, isLoading } = useAuth0()
   return (
     <StyledHeader>
       <h1>Ceres (demo)</h1>
@@ -60,9 +60,7 @@ const Header = () => {
               <li><Link to="/" className="nav-link">My Datasets</Link></li>
               <li><LogoutButton /></li>
             </>
-          ) : (
-            <li><LoginButton /></li>
-          )}
+          ) : ""}
         </NavList>
       </nav>
     </StyledHeader>

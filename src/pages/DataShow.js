@@ -226,6 +226,7 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
   }
 
   const deleteRows = ([start, end]) => {
+    console.log("deleting: ", start, end)
     const rows = getRange([start, end])
       .map(row => (items[row - 1] || {})._id)
       .filter(id => !!id)

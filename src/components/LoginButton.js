@@ -1,14 +1,16 @@
 import React from "react"
+import styled from "styled-components"
 import { useAuth0 } from "@auth0/auth0-react"
 
-const LoginButton = () => {
-  const { loginWithPopup } = useAuth0()
+const LoginButton = ({ email }) => {
+  // const [isOpen, setIsOpen] = React.useState(false)
+  const { loginWithRedirect } = useAuth0()
 
   const onClick = () => {
-    loginWithPopup()
+    loginWithRedirect()
   }
 
-  return <button {...{onClick}}>Log In</button>
+  return <button disabled={ !!email } {...{onClick}}>Log In</button>
 }
 
 export default LoginButton

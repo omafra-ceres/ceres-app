@@ -1,6 +1,6 @@
 const copyText = text => {
   const el = document.createElement("textarea")
-  el.value = text
+  el.value = text || " "
   el.setAttribute('readonly', '')
   el.style.position = 'absolute'
   el.style.left = '-9999px'

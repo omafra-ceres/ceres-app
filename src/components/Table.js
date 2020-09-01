@@ -510,23 +510,31 @@ const Table = ({
     setSelected({ type, coords })
   }, [selected])
 
-  const copySelected = useCallback(() => {
-    if (!selected.type) return
-    
-    const { type, coords } = selected
+  const copySelected = useCallback(data => {
+    if (!selected.type && !data) return
+
+    let dataCoords
+    if (data) {
+      const [colCoords, rowCoords] = data.split("/")
+      const [colStart, colEnd] = colCoords.split("-").map(num => parseInt(num))
+      const [rowStart, rowEnd] = rowCoords.split("-").map(num => parseInt(num))
+      dataCoords = [[colStart, rowStart], [colEnd, rowEnd]]
+    }
+
+    const { type, coords } = dataCoords ? { type: "cell", coords: dataCoords } : selected
     const getIndexes = arr => arr.map(n => n - 1).sort((a,b) => a - b)
-    const rows = getIndexes(getRange(type === "cell" ? coords.map(co => co[1]) : type === "row" ? coords : [1, columnCount]))
-    const cols = getIndexes(getRange(type === "cell" ? coords.map(co => co[0]) : type === "column" ? coords : [1, rowCount]))
-  
+    const cols = getIndexes(getRange(type === "cell" ? coords.map(co => co[0]) : type === "column" ? coords : [1, columnCount]))
+    const rows = getIndexes(getRange(type === "cell" ? coords.map(co => co[1]) : type === "row" ? coords : [1, rowCount]))
+
     const matrix = getEmptyMatrix(rows.length, cols.length)
     matrix.forEach((row, rowIndex) => row.forEach((_, colIndex) => {
-      matrix[rowIndex][colIndex] = items[rows[rowIndex]][cols[colIndex]]
+      matrix[rowIndex][colIndex] = (items[rows[rowIndex]] || [])[cols[colIndex]]
     }))
   
     const content = matrixToSpreadsheet(matrix)
     copyText(content)
   }, [ selected, items, rowCount, columnCount ])
-  
+
   useEffect(() => {
     const handleKeyDown = e => {
       const { key, metaKey, shiftKey } = e

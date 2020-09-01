@@ -24,7 +24,7 @@ const Login = () => {
         Welcome to Ceres!
       </h1>
       <p>
-        Please login to access your datasets...
+        Please click below to request a login email
       </p>
       <LoginButton />
     </Page>
