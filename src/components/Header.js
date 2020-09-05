@@ -1,10 +1,12 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import styled from 'styled-components'
 import { useAuth0 } from '@auth0/auth0-react'
 
 // import LoginButton from './LoginButton'
 import LogoutButton from './LogoutButton'
+
+import { useRoles } from '../customHooks'
 
 const StyledHeader = styled.header`
   align-items: center;
@@ -48,19 +50,32 @@ const NavList = styled.ul`
   }
 `
 
+const AdminLink = ({ isAdmin }) => isAdmin ? <li><Link to="/admin" className="nav-link">Admin Panel</Link></li> : ""
+
 const Header = () => {
   const { isAuthenticated, isLoading } = useAuth0()
+  const roles = useRoles()
+  const { state } = useLocation()
+
+  useEffect(() => {
+    console.log("state:", state)
+  }, [state])
+
   return (
     <StyledHeader>
       <h1>Ceres (demo)</h1>
       <nav>
         <NavList>
-          { isLoading ? "" : isAuthenticated ? (
-            <>
-              <li><Link to="/" className="nav-link">My Datasets</Link></li>
-              <li><LogoutButton /></li>
-            </>
-          ) : ""}
+          { isLoading || !isAuthenticated
+            ? ""
+            : (
+              <>
+                <li><Link to="/" className="nav-link">My Datasets</Link></li>
+                <AdminLink isAdmin={ roles && roles.includes("admin") } />
+                <li><LogoutButton /></li>
+              </>
+            )
+          }
         </NavList>
       </nav>
     </StyledHeader>

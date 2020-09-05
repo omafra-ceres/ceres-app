@@ -2,9 +2,9 @@ import React from 'react'
 import styled from 'styled-components'
 import { v4 as uuid } from 'uuid'
 
-import useAPI from '../customHooks/useAPI'
+import { useAPI } from '../customHooks'
 
-import Form from '../components/CustomForm'
+import { Form } from '../components'
 
 const templateItemSchema = {
   type: "object",

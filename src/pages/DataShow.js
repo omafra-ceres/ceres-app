@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import styled from 'styled-components'
 
-import Table from '../components/Table'
-import Button from '../components/Button'
-import { AddItemForm, EditDetailsForm, DeletedItems, ManageFilters } from '../components/modals'
+import { Table, Button } from '../components'
 
-import useAPI from '../customHooks/useAPI'
-import useModal from '../customHooks/useModal'
+import {
+  AddItemForm,
+  EditDetailsForm,
+  DeletedItems,
+  ManageFilters
+} from '../components/modals'
+
+import { useAPI, useModal } from '../customHooks'
 import { getRange, getFilterFunctions, removeFilter, getFilterList } from '../utils'
 
 

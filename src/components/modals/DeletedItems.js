@@ -3,8 +3,7 @@ import styled from 'styled-components'
 
 import Button from '../Button'
 
-import useAPI from '../../customHooks/useAPI'
-import useModal from '../../customHooks/useModal'
+import { useAPI, useModal } from '../../customHooks'
 
 const TH = styled.th`
   background: #333;

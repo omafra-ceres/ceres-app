@@ -4,8 +4,7 @@ import styled from 'styled-components'
 import Form from '../CustomForm'
 import Button from '../Button'
 
-import useAPI from '../../customHooks/useAPI'
-import useModal from '../../customHooks/useModal'
+import { useAPI, useModal } from '../../customHooks'
 
 const StyledForm = styled(Form)`
   min-width: 400px;

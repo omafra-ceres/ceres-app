@@ -10,7 +10,7 @@
 import React, { useEffect, useCallback } from "react"
 import styled from "styled-components"
 
-import useModal from "../customHooks/useModal"
+import { useModal } from "../customHooks"
 
 const ModalOverlay = styled.div`
   background: #4448;

@@ -1,7 +1,7 @@
 import React from 'react'
 import styled from 'styled-components'
 
-import LoginButton from '../components/LoginButton'
+import { LoginButton } from '../components'
 
 const Page = styled.div`
   max-width: 1000px;

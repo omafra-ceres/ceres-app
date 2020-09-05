@@ -4,7 +4,7 @@ import styled from 'styled-components'
 import Button from '../Button'
 import Input from '../InputContainer'
 
-import useModal from '../../customHooks/useModal'
+import { useModal } from '../../customHooks'
 
 import { addFilter, removeFilter, getFilterList } from '../../utils'
 

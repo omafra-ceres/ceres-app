@@ -24,7 +24,12 @@ const getTextWidth = (text, font="normal 16px sans-serif") => {
   return Math.ceil(metrics.width)
 }
 
+const capitalizeFirst = text => text[0].toUpperCase() + text.slice(1)
+const capitalize = text => text.split(" ").map(capitalizeFirst).join(" ")
+
 export {
   copyText,
   getTextWidth,
+  capitalizeFirst,
+  capitalize,
 }

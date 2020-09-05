@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import styled from 'styled-components'
 import { Link } from 'react-router-dom'
 
-import useAPI from '../customHooks/useAPI'
+import { useAPI } from '../customHooks'
 
 const CreateDataStructureLink = styled(Link)`
   background: ${ p => p.theme.blue };
@@ -185,11 +185,17 @@ const ActionMenuItem = styled.button.attrs(() => ({
   }
 `
 
-const DataIndex = () => {
+const DataIndex = ({ location }) => {
   const [dataStructures, setDataStructures] = useState([])
   const [ menuState, setMenuState ] = useState({})
   const menuContainer = useRef()
   const api = useAPI()
+
+  useEffect(() => {
+    if (location.state && location.state.error) {
+      console.error(location.state.error)
+    }
+  }, [ location ])
 
   useEffect(() => {
     if (menuState.isOpen) {

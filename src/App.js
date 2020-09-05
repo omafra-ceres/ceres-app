@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { BrowserRouter as Router, Route, Switch, Redirect } from 'react-router-dom'
 import { Auth0Provider, useAuth0 } from "@auth0/auth0-react"
 import styled, { ThemeProvider, css } from 'styled-components'
@@ -7,10 +7,11 @@ import DataIndex from './pages/DataIndex'
 import DataCreate from './pages/DataCreate'
 import DataShow from './pages/DataShow'
 import Login from './pages/Login'
-import Header from './components/Header'
+import Admin from './pages/Admin'
 
-import Modal from './components/Modal'
-import ContextMenu from './components/ContextMenu'
+import { Header, Modal, ContextMenu } from './components'
+
+import { useRoles } from './customHooks'
 
 // set of styles to hide elements from sighted users
 // they will still appear in the document flow for screen readers
@@ -52,17 +53,25 @@ const Container = styled.div`
   }
 `
 
-const PrivateRoute = ({ component: Page, ...innerProps }) => {
+const PrivateRoute = ({ role, component: Page, ...innerProps }) => {
   const { isAuthenticated, isLoading } = useAuth0()
+  const roles = useRoles()
+
+  const hasRole = role ? roles ? roles.includes(role) : false : true
+  const canRender = isAuthenticated && hasRole
+
+  const NoRender = isAuthenticated && !hasRole
+    ? props => <Redirect to={{ pathname: "/", state: { error: `Not authorized for '${ props.location.pathname }'` }}} />
+    : props => <Redirect to={{ pathname: "/login", state: { from: props.location }}} />
+  
   return (
     <Route
       { ...innerProps }
-      render={ props => isLoading
-        ? "loading"
-        : isAuthenticated
-          ? <Page  {...props } />
-          : <Redirect to={{ pathname: "/login", state: { from: props.location }}} />
-      }
+      render={ props => {
+        if (isLoading || !roles) return <div>loading...</div>
+        if (canRender) return <Page  {...props } />
+        return <NoRender {...props} />
+      }}
     />
   )
 }
@@ -98,6 +107,7 @@ function App() {
             <Switch>
               <LoginRoute path="/login" component={ Login } />
               <PrivateRoute path="/" exact component={ DataIndex } />
+              <PrivateRoute path="/admin" role="admin" component={ Admin } />
               <PrivateRoute path="/create" component={ DataCreate } />
               <PrivateRoute path="/:dataset" component={ DataShow } />
             </Switch>

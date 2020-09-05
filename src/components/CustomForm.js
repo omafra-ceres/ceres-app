@@ -2,9 +2,13 @@ import React from 'react'
 import styled, { css } from 'styled-components'
 import { withTheme } from '@rjsf/core'
 
-import InputContainer, { Label, InputError } from '../components/InputContainer'
-
-import { AddField, ButtonGroup } from '../components/Button'
+import {
+  InputContainer,
+  Label,
+  InputError,
+  AddField,
+  ButtonGroup
+} from '../components'
 
 
 ////////////////////////////////////////
@@ -293,8 +297,8 @@ const StringField = ({
   onBlur,
   onFocus
 }) => {
-  const inputType = uiSchema["ui:widget"] === "textarea"
-    ? "textarea"
+  const inputType = ["textarea", "email"].includes(uiSchema["ui:widget"])
+    ? uiSchema["ui:widget"]
     : schema.enum
       ? "select"
       : schema.type === "string"

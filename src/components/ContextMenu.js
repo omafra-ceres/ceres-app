@@ -10,7 +10,7 @@
 import React, { useState, useEffect, useRef } from "react"
 import styled from "styled-components"
 
-import useContextMenu from "../customHooks/useContextMenu"
+import { useContextMenu } from "../customHooks"
 
 import { callIfFunction } from "../utils"
 

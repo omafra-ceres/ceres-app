@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, forwardRef, useRef, useState, useEffect } from 'react'
 import styled from 'styled-components'
 
-import useScrollLock from '../customHooks/useScrollLock'
+import { useScrollLock, useContextMenu } from '../customHooks'
 
 import {
   matrixToSpreadsheet,
@@ -11,7 +11,6 @@ import {
   getTextWidth
 } from '../utils'
 
-import useContextMenu from '../customHooks/useContextMenu'
 
 const rowHeight = 52
 const columnWidth = 150
