@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import styled from 'styled-components'
 import { useAuth0 } from '@auth0/auth0-react'
+import { saveAs } from 'file-saver'
 
 import { Table, Button } from '../components'
 
@@ -253,6 +254,21 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
     modalActions.open("viewCollaborators", data)
   }
 
+  const downloadContent = () => {
+    const headers = tableHeaders
+      .map(header => header.title)
+      .reduce((acc, cur) => (acc ? acc + "," : "") + JSON.stringify(cur), "")
+      + "\n"
+    const rows = tableItems
+      .map(row => row
+        .map(item => item == null ? "" : item)
+        .reduce((acc, cur) => (acc ? acc + "," : "") + JSON.stringify(cur), "")
+      ).join("\n")
+    const csv = headers + rows
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    saveAs(blob, details.name.toLowerCase().replace(" ", "_"))
+  }
+
   const manageFilters = () => {
     const onSubmit = newFilters => setFilters(newFilters)
     const data = { template, filters, onSubmit }
@@ -323,7 +339,7 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
       <ActionBar actions={[
         ...restrictedActions,
         ...ownerActions,
-        { label: "Download", disabled: true },
+        { label: "Download", action: downloadContent, disabled: !(items && items.length) },
         { label: "Share", disabled: true },
       ]} />
       <FilterBar />
