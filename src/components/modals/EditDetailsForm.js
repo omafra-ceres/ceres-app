@@ -31,6 +31,10 @@ const FormToolbar = styled.div`
   display: flex;
   flex-direction: row;
   margin-top: 30px;
+
+  &.hidden {
+    display: none;
+  }
 `
 
 const getFormData = details => ({
@@ -40,7 +44,7 @@ const getFormData = details => ({
   })
 })
 
-const EditDetailsForm = ({ datasetId, onSubmit=(() => {}), details, viewMode }) => {
+const EditDetailsForm = ({ datasetId, onSubmit=(() => {}), details, viewMode, userRole }) => {
   const [ mode, setMode ] = useState(viewMode)
   const [newDetails, setNewDetails] = useState(details)
   const formEl = useRef()
@@ -68,7 +72,8 @@ const EditDetailsForm = ({ datasetId, onSubmit=(() => {}), details, viewMode }) 
     if (mode === "view") {
       setMode("edit")
     } else if (mode === "edit") {
-      api.post(`/data/${datasetId.slice(1)}/update`, { name, description })
+      const update = { details: { name, description }}
+      api.put(`/data/${datasetId.slice(1)}`, update)
         .then(() => {
           onSubmit(newDetails)
           close()
@@ -85,8 +90,20 @@ const EditDetailsForm = ({ datasetId, onSubmit=(() => {}), details, viewMode }) 
       formData={ getFormData(newDetails) }
       schema={{
         type: "object",
-        required: ["name", "description", "created_at"],
+        required: ["name", "created_at"],
         properties: {
+          owner: {
+            title: "",
+            type: "object",
+            required: ["email"],
+            properties: {
+              email: {
+                title: "Dataset owner",
+                type: "string",
+                readOnly: true
+              }
+            }
+          },
           created_at: {
             title: "Created on",
             type: "string",
@@ -116,7 +133,7 @@ const EditDetailsForm = ({ datasetId, onSubmit=(() => {}), details, viewMode }) 
       onChange={ handleChange }
       ref={ formEl }
     >
-      <FormToolbar>
+      <FormToolbar className={ userRole === "viewer" ? "hidden" : "" }>
         <Button buttonType="fill" type="submit">{ mode === "view" ? "Edit" : "Submit" }</Button>
         <Button buttonType="text" onClick={ close }>Cancel</Button>
       </FormToolbar>

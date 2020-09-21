@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import styled from 'styled-components'
+import { useAuth0 } from '@auth0/auth0-react'
 
 import { Table, Button } from '../components'
 
@@ -7,7 +8,8 @@ import {
   AddItemForm,
   EditDetailsForm,
   DeletedItems,
-  ManageFilters
+  ManageFilters,
+  Collaborators
 } from '../components/modals'
 
 import { useAPI, useModal } from '../customHooks'
@@ -159,20 +161,34 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
   const [ {details, template}, setDataset ] = useState({})
   const [ items, setItems ] = useState()
   const [ hasDeleted, setHasDeleted ] = useState()
+  const [ deleted, setDeleted ] = useState([])
   const [ filters, setFilters ] = useState({})
+  const [ userRole, setUserRole ] = useState()
+  const { user } = useAuth0()
+  
   const api = useAPI()
 
   const [ getProjection, filterAndSortRows ] = useMemo(() => getFilterFunctions(filters || {}, template), [ filters, template ])
 
   useEffect(() => {
+    const userId = user.sub.split("|")[1]
     api.get(`/data/${datasetId.slice(1)}`)
       .then(res => {
-        const { details, items, template, hasDeleted } = res.data
-        setDataset({ details, template })
+        const { dataset, items, template, hasDeleted } = res.data
+        const { owner_id: owner, collaborator_ids: collaborators } = dataset
+        const role = owner === userId ? "owner" : (collaborators || []).includes(userId) ? "collaborator" : "viewer"
+        setDataset({ ...dataset, template })
         setItems(items)
         setHasDeleted(hasDeleted)
+        setUserRole(role)
       }).catch(console.error)
-  },[ datasetId, api ])
+    api.get(`/data/${datasetId.slice(1)}/deleted`)
+      .then(res => {
+        setDeleted(res.data.items)
+      }).catch(error => {
+        if (error.request.status !== 401) console.error(error)
+      })
+  },[ user, datasetId, api ])
 
   const tableHeaders = useMemo(() => {
     if (!template) return
@@ -202,7 +218,8 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
     addItem: AddItemForm,
     editDetails: EditDetailsForm,
     viewDeleted: DeletedItems,
-    manageFilters: ManageFilters
+    manageFilters: ManageFilters,
+    viewCollaborators: Collaborators
   })[1]
   
   const addItemAction = () => {
@@ -213,14 +230,27 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
 
   const editDetailsAction = (viewMode="edit") => {
     const onSubmit = edit => setDataset({ template, details: { ...details, ...edit }})
-    const data = { onSubmit, datasetId, details, viewMode }
+    const data = { onSubmit, datasetId, details, viewMode, userRole }
     modalActions.open("editDetails", data)
   }
 
   const viewDeleted = async () => {
-    const onSubmit = recovered => setItems([...items, ...recovered].sort((a, b) => a.created_on - b.created_on))
-    const data = { headers: tableHeaders, onSubmit, datasetId }
+    const onSubmit = recovered => {
+      setItems([...items, ...recovered].sort((a, b) => a.created_on - b.created_on))
+      setDeleted(deleted.filter(item => !recovered.includes(item)))
+    }
+    const data = { headers: tableHeaders, onSubmit, datasetId, deleted }
     modalActions.open("viewDeleted", data)
+  }
+  
+  const viewCollaborators = async () => {
+    const onSubmit = edit => {
+      const newDetails = { ...details, ...edit }
+      console.log(newDetails)
+      setDataset({ template, details: newDetails })
+    }
+    const data = { collaborators: details.collaborators || [], onSubmit, datasetId }
+    modalActions.open("viewCollaborators", data)
   }
 
   const manageFilters = () => {
@@ -230,15 +260,16 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
   }
 
   const deleteRows = ([start, end]) => {
-    console.log("deleting: ", start, end)
     const rows = getRange([start, end])
       .map(row => (items[row - 1] || {})._id)
       .filter(id => !!id)
     if (!rows.length) return
-    api.post(`/data/${datasetId.slice(1)}/delete-items`, { items: rows })
+    api.post(`/data/${datasetId.slice(1)}/deleted`, { items: rows })
       .then(() => {
         if (!hasDeleted) setHasDeleted(true)
-        setItems(items.filter(item => !rows.includes(item._id)))
+        const toDelete = items.filter(item => rows.includes(item._id))
+        setDeleted([...deleted, ...toDelete.map(item => ({...item, deleted_on: Date.now()}))])
+        setItems(items.filter(item => !toDelete.includes(item)))
       }).catch(console.error)
   }
 
@@ -275,14 +306,25 @@ const DataShow = ({ location: { pathname: datasetId }}) => {
     )
   }
 
+  const ownerActions = userRole === "owner" ? [
+    { label: "Edit Details", action: editDetailsAction },
+    { label: "Edit Template", disabled: true },
+    { label: "Collaborators", action: viewCollaborators },
+  ] : []
+
+  const restrictedActions = ["owner", "collaborator"].includes(userRole) ? [
+    { label: "Add Item", action: addItemAction },
+    { label: "Recover Deleted", action: viewDeleted, disabled: !hasDeleted },
+  ] : []
+
   return details ? (
     <Page>
       <TitleBar title={ details.name } openDetails={ () => editDetailsAction("view") } />
       <ActionBar actions={[
-        { label: "Add Item", action: addItemAction },
-        { label: "Edit Details", action: editDetailsAction },
-        { label: "Edit Template", disabled: true },
-        { label: "Recover Deleted", action: viewDeleted, disabled: !hasDeleted },
+        ...restrictedActions,
+        ...ownerActions,
+        { label: "Download", disabled: true },
+        { label: "Share", disabled: true },
       ]} />
       <FilterBar />
       { tableHeaders && tableItems ? (

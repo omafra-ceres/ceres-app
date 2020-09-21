@@ -57,7 +57,7 @@ const AddItemForm = ({ template={}, datasetId, onSubmit=(() => {}) }) => {
   }, [ onSubmit ])
 
   const handleSubmit = ({formData}) => {
-    api.post(`/data/${datasetId.slice(1)}/addItem`, formData)
+    api.post(`/data/${datasetId.slice(1)}`, formData)
       .then(res => {
         onSubmit(res.data.item)
         close()

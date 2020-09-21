@@ -75,22 +75,12 @@ const FormToolbar = styled.div`
   margin-top: 30px;
 `
 
-const DeletedItems = ({ headers, onSubmit, datasetId }) => {
-  const [items, setItems] = useState([])
+const DeletedItems = ({ headers, onSubmit, datasetId, deleted }) => {
   const [selected, setSelected] = useState([])
   const { close } = useModal()[1]
   const api = useAPI()
 
   useEffect(() => () => setSelected([]), [ onSubmit ])
-
-  useEffect(() => {
-    const url = `/data/${datasetId.slice(1)}/deleted`
-    const getDeleted = async () => {
-      const res = await api.get(url)
-      setItems(res.data.items)
-    }
-    getDeleted()
-  }, [ datasetId ])
 
   const toggleItemSelection = id => {
     const newSelected = selected.includes(id)
@@ -100,8 +90,8 @@ const DeletedItems = ({ headers, onSubmit, datasetId }) => {
   }
 
   const handleRecover = () => {
-    api.post(`/data/${datasetId.slice(1)}/recover-deleted`, { items: selected })
-    onSubmit(items.filter(({ _id }) => selected.includes(_id)))
+    api.put(`/data/${datasetId.slice(1)}/deleted`, { items: selected })
+    onSubmit(deleted.filter(({ _id }) => selected.includes(_id)))
     close()
   }
   
@@ -125,7 +115,7 @@ const DeletedItems = ({ headers, onSubmit, datasetId }) => {
     <input
       type="checkbox"
       checked={ selected.length }
-      onChange={ () => setSelected(selected.length ? [] : items.map(({_id}) => _id)) }
+      onChange={ () => setSelected(selected.length ? [] : deleted.map(({_id}) => _id)) }
     />
   )
   return (
@@ -142,7 +132,7 @@ const DeletedItems = ({ headers, onSubmit, datasetId }) => {
             </TR>
           </thead>
           <tbody>
-            { items.map((item, rowIndex) => (
+            { deleted.map((item, rowIndex) => (
               <TR key={ rowIndex } selected={ selected.includes(item._id) }>
                 <ItemCheck id={ item._id } />
                 <ItemDate date={ item.deleted_on } />

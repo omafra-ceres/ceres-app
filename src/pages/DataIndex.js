@@ -204,7 +204,7 @@ const DataIndex = ({ location }) => {
   }, [ menuState ])
 
   useEffect(() => {
-    api.get(`/data`)
+    api.get(`/user/datasets`)
       .then(res => {
         setDataStructures(res.data)
       })

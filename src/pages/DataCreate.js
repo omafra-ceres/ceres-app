@@ -207,12 +207,12 @@ const DataCreate = () => {
   const handleSubmit = async ({formData}) => {
     const { details } = formData
     const template = generateTemplate(formData)
-    const created = await api.post(`/data/create`, {
+    const created = await api.post(`/user/create-dataset`, {
       details,
       template
     }).catch(err => console.error(err))
     
-    if (created.data.id) window.location.pathname = `/${created.data.id}`
+    if (created && created.data.id) window.location.pathname = `/${created.data.id}`
   }
 
   const handleChange = ({formData}) => {

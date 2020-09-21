@@ -53,7 +53,7 @@ const NavList = styled.ul`
 const AdminLink = ({ isAdmin }) => isAdmin ? <li><Link to="/admin" className="nav-link">Admin Panel</Link></li> : ""
 
 const Header = () => {
-  const { isAuthenticated, isLoading } = useAuth0()
+  const { user, isAuthenticated, isLoading } = useAuth0()
   const roles = useRoles()
   const { state } = useLocation()
 
@@ -64,6 +64,7 @@ const Header = () => {
   return (
     <StyledHeader>
       <h1>Ceres (demo)</h1>
+      <div>{ user ? user.email : "" }</div>
       <nav>
         <NavList>
           { isLoading || !isAuthenticated

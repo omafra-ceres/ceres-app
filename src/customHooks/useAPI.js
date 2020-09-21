@@ -23,20 +23,17 @@ const useAPI = () => {
     return savedToken
   }, [getAccessTokenSilently, getAccessTokenWithPopup])
 
-  const apiGet = useCallback(async (...args) => {
+  const request = useCallback(async config => {
     await gettingToken
-    return axios.get(...args)
+    return axios(config)
   }, [ gettingToken ])
   
-  const apiPost = useCallback(async (...args) => {
-    await gettingToken
-    return axios.post(...args)
-  }, [ gettingToken ])
-
   return useMemo(() => ({
-    get: apiGet,
-    post: apiPost
-  }), [apiGet, apiPost])
+    get: (url, config) => request({ method: "get", url, ...config }),
+    put: (url, data, config) => request({ method: "put", url, data, ...config }),
+    post: (url, data, config) => request({ method: "post", url, data, ...config }),
+    delete: (url, data, config) => request({ method: "delete", url, data, ...config }),
+  }), [request])
 }
 
 export default useAPI
