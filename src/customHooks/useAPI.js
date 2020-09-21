@@ -6,10 +6,11 @@ axios.defaults.baseURL = process.env.REACT_APP_API_URL
 
 let savedToken
 
-const useAPI = () => {
+const useAPI = (noAuth = false) => {
   const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0()
   
   const gettingToken = useMemo(async () => {
+    if (noAuth) return
     if (savedToken) return savedToken
     savedToken = getAccessTokenSilently({
       audience: 'ceres-api'
@@ -21,7 +22,7 @@ const useAPI = () => {
 
     axios.defaults.headers.common['Authorization'] = `Bearer ${await savedToken}`
     return savedToken
-  }, [getAccessTokenSilently, getAccessTokenWithPopup])
+  }, [getAccessTokenSilently, getAccessTokenWithPopup, noAuth])
 
   const request = useCallback(async config => {
     await gettingToken

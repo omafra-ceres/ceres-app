@@ -28,7 +28,7 @@ const CreateUser = () => {
     <Form
       schema={{
         type: "object",
-        required: ["name", "role", "email"],
+        required: ["name", "email"],
         properties: {
           name: { type: "string", title: "Name" },
           email: { type: "string", title: "Email", pattern: "^.+@ontario.ca$" }
