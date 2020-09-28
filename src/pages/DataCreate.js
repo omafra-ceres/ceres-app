@@ -1,6 +1,7 @@
 import React from 'react'
 import styled from 'styled-components'
 import { v4 as uuid } from 'uuid'
+import { useAuth0 } from '@auth0/auth0-react'
 
 import { useAPI } from '../customHooks'
 
@@ -202,11 +203,16 @@ const generateTemplate = ({ details, template }) => {
 
 const DataCreate = () => {
   const [formData, setFormData] = React.useState(initialFormData)
+  const { user } = useAuth0()
   const api = useAPI()
 
-  const handleSubmit = async ({formData}) => {
+  const handleSubmit = async ({ formData }) => {
     const { details } = formData
     const template = generateTemplate(formData)
+    const { email, name } = user
+    
+    details.owner = { name, email }
+    
     const created = await api.post(`/user/create-dataset`, {
       details,
       template
