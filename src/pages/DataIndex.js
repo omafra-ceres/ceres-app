@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import styled from 'styled-components'
+import styled, { keyframes } from 'styled-components'
 import { Link } from 'react-router-dom'
 
 import { useAPI } from '../customHooks'
@@ -101,6 +101,11 @@ const ListHeader = styled.div`
   padding-bottom: 20px;
 `
 
+const fade = keyframes`
+  from { opacity: 1; }
+  to { opacity: 0; }
+`
+
 const PlaceholderLiContainer = styled.div`
   &:not(:first-child) {
     margin-top: 10px;
@@ -113,14 +118,23 @@ const PlaceholderLiContainer = styled.div`
   padding: 10px 20px;
 
   div {
-    background: #ddd;
+    background: linear-gradient(to right, #ddd 75%, #efefef);
     height: 18px;
+    position: relative;
+    width: 340px;
+
+    &::after {
+      ${ props => props.theme.pseudoFill }
+      animation: ${ fade } 1.5s ease-out infinite alternate;
+      animation-delay: inherit;
+      background: #ddd;
+    }
   }
 `
 
-const PlaceholderLi = () => (
+const PlaceholderLi = ({ index }) => (
   <PlaceholderLiContainer>
-    <div style={{ width: 100 + Math.ceil(Math.random() * 300) }} />
+    <div style={{ animationDelay: `${ index * 200 }ms` }} />
   </PlaceholderLiContainer>
 )
 
@@ -186,7 +200,7 @@ const ActionMenuItem = styled.button.attrs(() => ({
 `
 
 const DataIndex = ({ location }) => {
-  const [dataStructures, setDataStructures] = useState([])
+  const [ dataStructures, setDataStructures ] = useState([])
   const [ menuState, setMenuState ] = useState({})
   const menuContainer = useRef()
   const api = useAPI()
@@ -292,6 +306,8 @@ const DataIndex = ({ location }) => {
     itemActions[e.target.dataset.value]()
   }
 
+  const Placeholder = () => [0,1,2,3,4].map((i) => <PlaceholderLi index={ i } key={ i } />)
+
   return (
     <Page>
       <ListHeader>
@@ -304,23 +320,25 @@ const DataIndex = ({ location }) => {
           {/* <div>Status</div> */}
           {/* <div>Actions</div> */}
         </ListColumns>
-        { dataStructures.length ? dataStructures.map(data => {
-          const created = new Date(data.created_at).toLocaleDateString(undefined, {
-            month: 'short', day: 'numeric', year: 'numeric'
-          })
-          return (
-            <DataStructureListItem key={data._id}>
-              <Link to={`/${data.id}`}>
-                <DatasetTitle>{ data.name }</DatasetTitle>
-                <span>{ created }</span>
-                {/* <DatasetStatus>{ data.status }</DatasetStatus> */}
-                <div />
-                <ActionsButton onClick={ (e) => handleActionClick(e, data) }>︙</ActionsButton>
-                {/* <DeleteDataStructureButton onClick={(e) => handleDelete(e, data)}>Delete</DeleteDataStructureButton> */}
-              </Link>
-            </DataStructureListItem>
-          )
-        }) : [0,1,2,3,4].map((i) => <PlaceholderLi key={ i } />) }
+        {
+          dataStructures.length ? dataStructures.map(data => {
+            const created = new Date(data.created_at).toLocaleDateString(undefined, {
+              month: 'short', day: 'numeric', year: 'numeric'
+            })
+            return (
+              <DataStructureListItem key={data._id}>
+                <Link to={`/${data.id}`}>
+                  <DatasetTitle>{ data.name }</DatasetTitle>
+                  <span>{ created }</span>
+                  {/* <DatasetStatus>{ data.status }</DatasetStatus> */}
+                  <div />
+                  <ActionsButton onClick={ (e) => handleActionClick(e, data) }>︙</ActionsButton>
+                  {/* <DeleteDataStructureButton onClick={(e) => handleDelete(e, data)}>Delete</DeleteDataStructureButton> */}
+                </Link>
+              </DataStructureListItem>
+            )
+          }) : <Placeholder />
+        }
       </DataStructureListContainer>
       <CreateDataStructureLink to="/create">New Dataset</CreateDataStructureLink>
       <ActionsMenu
