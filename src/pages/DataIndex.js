@@ -3,8 +3,9 @@ import styled, { keyframes } from 'styled-components'
 import { Link } from 'react-router-dom'
 
 import { useAPI } from '../customHooks'
+import { Button } from '../components'
 
-const CreateDataStructureLink = styled(Link)`
+const StyledCreateLink = styled(Link)`
   background: ${ p => p.theme.blue };
   border-radius: 4px;
   box-sizing: border-box;
@@ -14,7 +15,9 @@ const CreateDataStructureLink = styled(Link)`
   text-decoration: none;
 `
 
-const DataStructureListContainer = styled.ul`
+const CreateDatasetLink = () => <StyledCreateLink to="/create">New Dataset</StyledCreateLink>
+
+const DatasetListContainer = styled.ul`
   list-style: none;
   margin: 0;
   padding: 0;
@@ -27,7 +30,7 @@ const ListColumns = styled.li`
   padding: 5px 20px 10px;
 `
 
-const DataStructureListItem = styled.li`
+const DatasetListItem = styled.li`
   margin-top: 10px;
 
   a {
@@ -138,71 +141,8 @@ const PlaceholderLi = ({ index }) => (
   </PlaceholderLiContainer>
 )
 
-const ActionsButton = styled.button`
-  background: white;
-  border: none;
-  border-radius: 4px;
-  color: #444;
-  font-weight: bold;
-  font-size: 20px;
-  height: 26px;
-  opacity: 0.4;
-  padding: 0;
-  text-align: center;
-  width: 40px;
-
-  *:hover > &, &:focus {
-    opacity: 1;
-  }
-
-  &:hover {
-    background: #f4f4f4;
-  }
-
-  &:active {
-    background: #ddd;
-  }
-`
-
-const ActionsMenu = styled.ul.attrs(p => ({
-  style: {
-    top: p.top - 25 || 0,
-    left: p.right - 150 || 0,
-    display: p.isOpen ? "block" : "none"
-  }
-}))`
-  background: white;
-  border-radius: 1px;
-  box-shadow: 0 2px 6px 2px #3c404326;
-  list-style: none;
-  margin: 0;
-  padding: 5px 0;
-  position: absolute;
-  width: 150px;
-  z-index: 2;
-`
-
-const ActionMenuItem = styled.button.attrs(() => ({
-  onMouseOver: e => e.target.focus()
-}))`
-  background: white;
-  border: none;
-  display: block;
-  line-height: 30px;
-  padding: 0 10px;
-  text-align: left;
-  width: 100%;
-
-  &:focus {
-    background: #0092ff44;
-    outline: none;
-  }
-`
-
 const DataIndex = ({ location }) => {
-  const [ dataStructures, setDataStructures ] = useState([])
-  const [ menuState, setMenuState ] = useState({})
-  const menuContainer = useRef()
+  const [ datasets, setDatasets ] = useState([])
   const api = useAPI()
 
   useEffect(() => {
@@ -212,98 +152,27 @@ const DataIndex = ({ location }) => {
   }, [ location ])
 
   useEffect(() => {
-    if (menuState.isOpen) {
-      menuContainer.current.firstChild.firstChild.focus()
-    }
-  }, [ menuState ])
-
-  useEffect(() => {
     api.get(`/user/datasets`)
       .then(res => {
-        setDataStructures(res.data)
+        setDatasets(res.data)
       })
       .catch(console.error)
   },[ api ])
 
-  const closeMenu = () => {
-    setMenuState({ isOpen: false })
-  }
-
-  const handleMenuBlur = e => {
-    if (!e.relatedTarget) closeMenu()
-  }
-
-  const handleMenuKeyDown = e => {
-    if (e.key === "Escape") closeMenu()
-    
-    if (!["Tab", "ArrowDown", "ArrowUp"].includes(e.key)) return
-
-    const children = Array.from(e.currentTarget.children)
-      .map(ch => ch.firstChild)
-      .filter(ch => !ch.attributes.disabled)
-    const first = children[0]
-    const last = children[children.length - 1]
-    
-    // trap focus inside menu while menu is open
-    if (e.key === "Tab") {
-      if (e.target === first && e.shiftKey) {
-        e.preventDefault()
-        last.focus()
-      }
-      if (e.target === last && !e.shiftKey) {
-        e.preventDefault()
-        first.focus()
-      }
+  const DeleteButton = ({ datasetId }) => {
+    const handleClick = e => {
+      e.preventDefault()
+      setDatasets(datasets.filter(set => set.id !== datasetId))
+      api.post(`/data/${datasetId}/archive`)
+         .catch(console.error)
     }
-
-    // allow arrow keys to navigate menu
-    if (e.key === "ArrowDown") {
-      if (e.target === last) {
-        first.focus()
-      } else {
-        children[children.indexOf(e.target) + 1].focus()
-      }
-    }
-    if (e.key === "ArrowUp") {
-      if (e.target === first) {
-        last.focus()
-      } else {
-        children[children.indexOf(e.target) - 1].focus()
-      }
-    }
-  }
-
-  const handleActionClick = (e, dataset) => {
-    e.preventDefault()
-    const { top, right } = e.target.getBoundingClientRect()
-    setMenuState({
-      isOpen: true,
-      dataset,
-      top,
-      right
-    })
-  }
-
-  const itemActions = {
-    archive: () => {
-      api.post(`/data/archive`, menuState.dataset)
-        .then(() => {
-          setDataStructures(dataStructures.filter(set => set !== menuState.dataset))
-        })
-        .catch(console.error)
-    }, unarchive: () => {
-      api.post(`/data/unarchive`, menuState.dataset)
-        .then(() => {
-          setDataStructures(dataStructures.filter(set => set !== menuState.dataset))
-        })
-        .catch(console.error)
-    }
-  }
-  
-  const handleActionItemClick = e => {
-    e.preventDefault()
-    closeMenu()
-    itemActions[e.target.dataset.value]()
+    return (
+      <Button
+        buttonType="text"
+        style={{ color: "red" }}
+        onClick={ handleClick }
+      >delete</Button>
+    )
   }
 
   const Placeholder = () => [0,1,2,3,4].map((i) => <PlaceholderLi index={ i } key={ i } />)
@@ -313,45 +182,30 @@ const DataIndex = ({ location }) => {
       <ListHeader>
         <h1>Datasets</h1>
       </ListHeader>
-      <DataStructureListContainer>
+      <DatasetListContainer>
         <ListColumns>
           <div>Name</div>
           <div>Created On</div>
-          {/* <div>Status</div> */}
-          {/* <div>Actions</div> */}
         </ListColumns>
         {
-          dataStructures.length ? dataStructures.map(data => {
+          datasets.length ? datasets.map(data => {
             const created = new Date(data.created_at).toLocaleDateString(undefined, {
               month: 'short', day: 'numeric', year: 'numeric'
             })
             return (
-              <DataStructureListItem key={data._id}>
+              <DatasetListItem key={data.id}>
                 <Link to={`/${data.id}`}>
                   <DatasetTitle>{ data.name }</DatasetTitle>
                   <span>{ created }</span>
-                  {/* <DatasetStatus>{ data.status }</DatasetStatus> */}
                   <div />
-                  <ActionsButton onClick={ (e) => handleActionClick(e, data) }>︙</ActionsButton>
-                  {/* <DeleteDataStructureButton onClick={(e) => handleDelete(e, data)}>Delete</DeleteDataStructureButton> */}
+                  <DeleteButton datasetId={ data.id } />
                 </Link>
-              </DataStructureListItem>
+              </DatasetListItem>
             )
           }) : <Placeholder />
         }
-      </DataStructureListContainer>
-      <CreateDataStructureLink to="/create">New Dataset</CreateDataStructureLink>
-      <ActionsMenu
-        {...menuState}
-        ref={ menuContainer }
-        onKeyDown={ handleMenuKeyDown }
-        onBlur={ handleMenuBlur }
-      >
-        <li><ActionMenuItem data-value="delete" onClick={ handleActionItemClick }>Delete Dataset</ActionMenuItem></li>
-        <li><ActionMenuItem disabled data-value="share" onClick={ handleActionItemClick }>Share Dataset</ActionMenuItem></li>
-        <li><ActionMenuItem disabled data-value="export" onClick={ handleActionItemClick }>Export Dataset</ActionMenuItem></li>
-        <li><ActionMenuItem disabled data-value="invite" onClick={ handleActionItemClick }>Invite Collaborator</ActionMenuItem></li>
-      </ActionsMenu>
+      </DatasetListContainer>
+      <CreateDatasetLink />
     </Page>
   )
 }
