@@ -5,6 +5,91 @@ import { Link } from 'react-router-dom'
 import { useAPI } from '../customHooks'
 import { Button } from '../components'
 
+const Page = styled.div`
+  background: #efefef;
+  height: calc(100vh - 65px);
+  margin-top: -5px;
+  overflow-y: auto;
+  padding: 0 0 0 250px;
+  position: relative;
+  width: 100vw;
+`
+
+const SidebarContainer = styled.nav`
+  background: white;
+  border-right: 1px solid #aaa;
+  height: calc(100vh - 65px);
+  left: 0;
+  overflow-y: auto;
+  position: fixed;
+  width: 250px;
+
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 112px 0 0;
+  }
+
+  hr {
+    background: linear-gradient(to right, #ddd0, #dddf 10%, #dddf 90%, #ddd0);
+    border: none;
+    height: 1px;
+    margin: 8px 10px;
+  }
+`
+
+const SidebarButton = styled(Button)`
+  border-radius: 0;
+  font-size: 14px;
+  font-weight: normal;
+  height: 36px;
+  margin: 0;
+  padding: 0;
+  padding-left: 45px;
+  position: relative;
+  text-align: left;
+  width: 100%;
+
+  &.selected {
+    font-weight: bold;
+
+    &::before {
+      ${ props => props.theme.pseudoFill }
+      content: ">";
+      left: 20px;
+      line-height: 36px;
+    }
+
+    :focus {
+      box-shadow: none;
+    }
+  }
+
+  &:not(:disabled) {
+    cursor: pointer;
+
+    :hover {
+      background: #efefef;
+    }
+  }
+`
+
+const Content = styled.div`
+  max-width: 1000px;
+  margin-left: 50px;
+  padding: 20px 25px;
+
+  h1 {
+    font-size: ${ p => p.theme.headerSize };
+    margin-bottom: 0;
+    margin-top: 15px;
+  }
+
+  ul {
+    margin: 25px 0;
+  }
+`
+
 const StyledCreateLink = styled(Link)`
   background: ${ p => p.theme.blue };
   border-radius: 4px;
@@ -31,6 +116,7 @@ const ListColumns = styled.li`
 `
 
 const DatasetListItem = styled.li`
+  background: white;
   margin-top: 10px;
 
   a {
@@ -80,18 +166,26 @@ const DatasetTitle = styled.span`
   word-wrap: none;
 `
 
-const Page = styled.div`
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 20px 25px;
+const DatasetActionButton = styled(Button).attrs(() => ({
+  buttonType: "text"
+}))`
+  border: 1px solid transparent;
+  border-radius: 1px;
+  cursor: pointer;
+  height: 100%;
+  margin: 0;
+`
 
-  h1 {
-    font-size: ${ p => p.theme.headerSize };
-    margin-bottom: 0;
+const DatasetDelete = styled(DatasetActionButton)`
+  :hover {
+    border-color: red;
+    color: red;
   }
+`
 
-  ul {
-    margin: 25px 0;
+const DatasetRecover = styled(DatasetActionButton)`
+  :hover {
+    border-color: currentColor;
   }
 `
 
@@ -115,13 +209,13 @@ const PlaceholderLiContainer = styled.div`
   }
 
   align-items: center;
-  background: #efefef;
+  background: #f8f8f8;
   display: flex;
   height: 58px;
   padding: 10px 20px;
 
   div {
-    background: linear-gradient(to right, #ddd 75%, #efefef);
+    background: linear-gradient(to right, #ddd 75%, #f8f8f8);
     height: 18px;
     position: relative;
     width: 340px;
@@ -141,8 +235,22 @@ const PlaceholderLi = ({ index }) => (
   </PlaceholderLiContainer>
 )
 
+const navPaths = [
+  [
+    { label: "Search", path: "/data/search", disabled: true },
+  ],[
+    { label: "My datasets", path: "/user/datasets" },
+    { label: "Favourites", path: "/user/favourites", disabled: true },
+    { label: "Global datasets", path: "/data/global", disabled: true },
+  ],[
+    { label: "Deleted", path: "/user/deleted" },
+  ]
+]
+
 const DataIndex = ({ location }) => {
+  const [ isLoading, setIsLoading ] = useState(true)
   const [ datasets, setDatasets ] = useState([])
+  const [ navView, setNavView ] = useState(navPaths[1][0])
   const api = useAPI()
 
   useEffect(() => {
@@ -152,12 +260,43 @@ const DataIndex = ({ location }) => {
   }, [ location ])
 
   useEffect(() => {
-    api.get(`/user/datasets`)
+    api.get(navView.path)
       .then(res => {
+        setIsLoading(false)
         setDatasets(res.data)
+      }).catch(error => {
+        setIsLoading(false)
+        console.error(error)
       })
-      .catch(console.error)
-  },[ api ])
+  },[ api, navView ])
+  
+  const SidebarItem = ({ path }) => (
+    <li>
+      <SidebarButton
+        buttonType="text"
+        onClick={ () => {
+          if (navView !== path) {
+            setIsLoading(true)
+            setNavView(path)
+          }
+        }}
+        className={ navView === path ? "selected" : "" }
+        disabled={ path.disabled }
+      >
+        { path.label }
+      </SidebarButton>
+    </li>
+  )
+
+  const SidebarLinks = () => <ul>{
+    navPaths.reduce((links, group) => [
+      ...links,
+      ...(links.length ? [<hr />] : []),
+      ...group.map(path => (
+        <SidebarItem {...{ path }} />
+      ))
+    ], [])
+  }</ul>
 
   const DeleteButton = ({ datasetId }) => {
     const handleClick = e => {
@@ -167,45 +306,65 @@ const DataIndex = ({ location }) => {
          .catch(console.error)
     }
     return (
-      <Button
-        buttonType="text"
-        style={{ color: "red" }}
-        onClick={ handleClick }
-      >delete</Button>
+      <DatasetDelete onClick={ handleClick }>delete</DatasetDelete>
     )
   }
+  
+  const RecoverButton = ({ datasetId }) => {
+    const handleClick = e => {
+      e.preventDefault()
+      setDatasets(datasets.filter(set => set.id !== datasetId))
+      api.put(`/data/${datasetId}/archive`)
+         .catch(console.error)
+    }
+    return (
+      <DatasetRecover onClick={ handleClick }>recover</DatasetRecover>
+    )
+  }
+
+  const DatasetAction = props => ({
+    "/user/datasets": <DeleteButton {...props} />,
+    "/user/deleted": <RecoverButton {...props} />
+  })[navView.path]
 
   const Placeholder = () => [0,1,2,3,4].map((i) => <PlaceholderLi index={ i } key={ i } />)
 
   return (
     <Page>
-      <ListHeader>
-        <h1>Datasets</h1>
-      </ListHeader>
-      <DatasetListContainer>
-        <ListColumns>
-          <div>Name</div>
-          <div>Created On</div>
-        </ListColumns>
-        {
-          datasets.length ? datasets.map(data => {
-            const created = new Date(data.created_at).toLocaleDateString(undefined, {
-              month: 'short', day: 'numeric', year: 'numeric'
-            })
-            return (
-              <DatasetListItem key={data.id}>
-                <Link to={`/${data.id}`}>
-                  <DatasetTitle>{ data.name }</DatasetTitle>
-                  <span>{ created }</span>
-                  <div />
-                  <DeleteButton datasetId={ data.id } />
-                </Link>
-              </DatasetListItem>
-            )
-          }) : <Placeholder />
-        }
-      </DatasetListContainer>
-      <CreateDatasetLink />
+      <SidebarContainer>
+        <SidebarLinks />
+      </SidebarContainer>
+      <Content>
+        <ListHeader>
+          <h1>{ navView.label }</h1>
+        </ListHeader>
+        <DatasetListContainer>
+          <ListColumns>
+            <div>Name</div>
+            <div>Created On</div>
+          </ListColumns>
+          {
+            isLoading || !datasets.length
+              ? <Placeholder />
+              : datasets.map(data => {
+                const created = new Date(data.created_at).toLocaleDateString(undefined, {
+                  month: 'short', day: 'numeric', year: 'numeric'
+                })
+                return (
+                  <DatasetListItem key={data.id}>
+                    <Link to={`/${data.id}`}>
+                      <DatasetTitle>{ data.name }</DatasetTitle>
+                      <span>{ created }</span>
+                      <div />
+                      <DatasetAction datasetId={ data.id } />
+                    </Link>
+                  </DatasetListItem>
+                )
+              })
+          }
+        </DatasetListContainer>
+        { !isLoading && navView.path === "/user/datasets" ? <CreateDatasetLink /> : "" }
+      </Content>
     </Page>
   )
 }
