@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Link, useRouteMatch } from 'react-router-dom'
+import { Link, useRouteMatch, Redirect } from 'react-router-dom'
 import styled from 'styled-components'
 
 import { CreateUser, ManageUsers } from './adminPages'
@@ -19,16 +19,23 @@ const Page = styled.div`
   p {
     font-size: 14px;
   }
+
+  hr {
+    background: #aaa;
+    border: none;
+    height: 1px;
+    margin: 8px 0px;
+  }
 `
 
 const Sidebar = styled.nav`
-  border-right: 2px solid #ddd;
+  border-right: 1px solid #aaa;
   display: flex;
   flex-direction: column;
   height: calc(100vh - 65px);
   margin-top: -5px;
   padding: 20px;
-  width: 200px;
+  width: 250px;
 
   a {
     padding: 4px 0;
@@ -57,15 +64,37 @@ const pages = {
 }
 
 const menuOptions = [
-  { path: "users/create", label: "Create new user" },
-  { path: "users/manage", label: "Manage users" }
+  [
+    { path: "users/manage", label: "Manage users" },
+    { path: "users/create", label: "Create new user" }
+  ],[
+    { path: "global/manage", label: "Manage global datasets" },
+    { path: "global/create", label: "Create global dataset" }
+  ]
 ]
+
+const SidebarOptions = () => (
+  <>
+    {
+      menuOptions.reduce((options, group) => [
+        ...options,
+        ...(options.length ? [<hr key={ `break-${options.length}` } />] : []),
+        ...group.map(link => (
+          <Link
+            key={ link.path }
+            to={ `/admin/${link.path}` }
+          >{ link.label }</Link>
+        ))
+      ], [])
+    }
+  </>
+)
 
 const Admin = () => {
   const match = useRouteMatch("/admin/:page/:action")
 
   const Content = useMemo(() => {
-    if (!match) return pages.default
+    if (!match) return () => <Redirect to="/admin/users/manage" />
     const { page, action } = match.params
     return pages[page][action]
   }, [ match ])
@@ -79,7 +108,7 @@ const Admin = () => {
   return (
     <Page>
       <Sidebar>
-        { menuOptions.map(op => <Link key={ op.path } to={ `/admin/${op.path}` }>{ op.label }</Link>) }
+        <SidebarOptions />
       </Sidebar>
       <ContentContainer>
         <h1>{ pageTitle }</h1>

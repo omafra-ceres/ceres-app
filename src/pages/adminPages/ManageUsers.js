@@ -93,16 +93,19 @@ const ManageUsers = () => {
           </tr>
         </thead>
         <tbody>
-          { users.map(user => (
-            <TR>
-              <TD>{ user.name }</TD>
-              <TD>{ user.email }</TD>
-              <TD style={{ paddingRight: "2px" }}>{ (user.app_metadata.roles || []).includes("admin") ? <AdminFlag /> : "" }</TD>
-              <TD style={{ padding: "2px" }}>{ (user.app_metadata.roles || []).includes("internal") ? <IntFlag /> : "" }</TD>
-              <TD style={{ paddingLeft: "2px" }}>{ !user.app_metadata.roles || user.app_metadata.roles.includes("temporary") ? <TempFlag /> : "" }</TD>
-              <TD>{ new Date(user.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) }</TD>
-            </TR>
-          )) }
+          { users.map((user, i) => {
+            const roles = (user.app_metadata || {}).roles || []
+            return (
+              <TR key={ i }>
+                <TD>{ user.name }</TD>
+                <TD>{ user.email }</TD>
+                <TD style={{ paddingRight: "2px" }}>{ roles.includes("admin") ? <AdminFlag /> : "" }</TD>
+                <TD style={{ padding: "2px" }}>{ roles.includes("internal") ? <IntFlag /> : "" }</TD>
+                <TD style={{ paddingLeft: "2px" }}>{ !roles.length ? <TempFlag /> : "" }</TD>
+                <TD>{ new Date(user.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) }</TD>
+              </TR>
+            )
+          })}
         </tbody>
       </StyledTable>
     </div>
