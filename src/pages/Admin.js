@@ -2,7 +2,12 @@ import React, { useMemo, useState } from 'react'
 import { Link, useRouteMatch, Redirect } from 'react-router-dom'
 import styled from 'styled-components'
 
-import { CreateUser, ManageUsers } from './adminPages'
+import {
+  CreateUser,
+  ManageUsers,
+  CreateGlobal,
+  ManageGlobal
+} from './adminPages'
 
 import { capitalize } from '../utils'
 
@@ -46,6 +51,7 @@ const ContentContainer = styled.div`
   height: calc(100vh - 70px);
   overflow-y: auto;
   padding: 17px 20px 20px;
+  width: 100%;
 `
 
 const MainPanel = () => (
@@ -60,6 +66,10 @@ const pages = {
   users: {
     create: CreateUser,
     manage: ManageUsers
+  },
+  global: {
+    create: CreateGlobal,
+    manage: ManageGlobal
   }
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { Link } from 'react-router-dom'
 
@@ -289,11 +289,11 @@ const DataIndex = ({ location }) => {
   )
 
   const SidebarLinks = () => <ul>{
-    navPaths.reduce((links, group) => [
+    navPaths.reduce((links, group, index) => [
       ...links,
-      ...(links.length ? [<hr />] : []),
-      ...group.map(path => (
-        <SidebarItem {...{ path }} />
+      ...(links.length ? [<hr key={ `break-${index}` } />] : []),
+      ...group.map((path, i) => (
+        <SidebarItem key={ `${index}-${i}` } {...{ path }} />
       ))
     ], [])
   }</ul>
