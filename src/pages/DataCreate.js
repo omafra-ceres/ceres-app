@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import styled from 'styled-components'
 import { v4 as uuid } from 'uuid'
 import { useAuth0 } from '@auth0/auth0-react'
@@ -19,8 +19,13 @@ const templateItemSchema = {
       title: "Column Data Type",
       type: "string",
       default: "string",
-      enum: ["string", "number", "boolean"],
-      enumNames: ["Text", "Number", "True/False"]
+      // enum: ["string", "number", "boolean"],
+      // enumNames: ["Text", "Number", "True/False"]
+      anyOf: [
+        { group: "Simple data types", title: "Text", enum: ["string"] },
+        { group: "Simple data types", title: "Number", enum: ["number"] },
+        { group: "Simple data types", title: "True/False", enum: ["boolean"] }
+      ]
     },
     required: {
       title: "This column is required",
@@ -73,7 +78,10 @@ const formUISchema = {
       "ui:grid-template": `
         "a b" 2fr
         "c c" 1fr / 1.25fr 1fr`,
-      "ui:grid-areas": ["a", "b", "c"]
+      "ui:grid-areas": ["a", "b", "c"],
+      type: {
+        "ui:widget": "select"
+      }
     }
   }
 }
@@ -202,9 +210,33 @@ const generateTemplate = ({ details, template }) => {
 }
 
 const DataCreate = () => {
-  const [formData, setFormData] = React.useState(initialFormData)
+  const [ formData, setFormData ] = useState(initialFormData)
+  const [ globalData, setGlobalData ] = useState([])
+  const [ loading, setLoading ] = useState(true)
   const { user } = useAuth0()
   const api = useAPI()
+
+  useEffect(() => {
+    api.get("/data/global")
+       .then(res => {
+         setGlobalData(res.data)
+         setLoading(false)
+       }).catch(console.error)
+  }, [ api ])
+
+  const getSchema = () => {
+    const schemaCopy = JSON.parse(JSON.stringify(formSchema))
+    const dataTypeOptions = schemaCopy.properties.template.items.properties.type.anyOf
+    schemaCopy.properties.template.items.properties.type.anyOf = [
+      ...dataTypeOptions,
+      ...globalData.map(dataset => ({
+        group: "Global datasets",
+        title: dataset.name,
+        enum: [`global__${ dataset.id }`]
+      }))
+    ]
+    return schemaCopy
+  }
 
   const handleSubmit = async ({ formData }) => {
     const { details } = formData
@@ -227,19 +259,21 @@ const DataCreate = () => {
 
   return (
     <Page>
-      <Form
-        schema={ formSchema }
-        uiSchema={ formUISchema }
-        formData={ formData }
-        onSubmit={ handleSubmit }
-        onChange={ handleChange }
-        transformErrors={ transformErrors }
-      >
-        <FormActionsContainer>
-          <Submit>Create</Submit>
-          <TextButton onClick={() => window.location.pathname = "/"}>Cancel</TextButton>
-        </FormActionsContainer>
-      </Form>
+      { loading ? "loading..." : (
+        <Form
+          schema={ getSchema() }
+          uiSchema={ formUISchema }
+          formData={ formData }
+          onSubmit={ handleSubmit }
+          onChange={ handleChange }
+          transformErrors={ transformErrors }
+        >
+          <FormActionsContainer>
+            <Submit>Create</Submit>
+            <TextButton onClick={() => window.location.pathname = "/"}>Cancel</TextButton>
+          </FormActionsContainer>
+        </Form>
+      )}
     </Page>
   )
 }

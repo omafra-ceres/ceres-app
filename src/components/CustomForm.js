@@ -283,6 +283,56 @@ const ArrayFieldTemplate = ({
   )
 }
 
+const formatEnum = schema => {
+  return schema.enum.map((option, i) => ({
+    value: option,
+    label: schema.enumNames
+      ? schema.enumNames[i]
+      : option
+  }))
+}
+
+const formatGroups = schema => {
+  const groups = {}
+  schema.anyOf.forEach(option => {
+    let { title: label, enum: [ value ], group="options" } = option
+    if (!label) label = value
+    if (!groups[group]) groups[group] = []
+    groups[group].push({ value, label })
+  })
+  return Object.keys(groups).map(key => ({
+    label: key,
+    options: groups[key]
+  }))
+}
+
+const formatAnyOf = schema => {
+  if (schema.anyOf[0].group) return formatGroups(schema)
+
+  return schema.anyOf.map(option => {
+    let { title: label, enum: [ value ] } = option
+    if (!label) label = value
+    return { value, label }
+  })
+}
+
+const formatOptions = schema => {
+  return schema.enum
+    ? formatEnum(schema)
+    : formatAnyOf(schema)
+}
+
+const getSelectedFromGroup = (options, formData) => {
+  return options
+    .reduce((ops, group) => [...ops, ...group.options], [])
+    .find(op => op.value === formData)
+}
+
+const getSelected = (options, formData) => {
+  if (options[0].options) return getSelectedFromGroup(options, formData)
+  return options.find(op => op.value === formData)
+}
+
 const StringField = ({
   schema,
   uiSchema,
@@ -297,7 +347,7 @@ const StringField = ({
   onBlur,
   onFocus
 }) => {
-  const inputType = ["textarea", "email"].includes(uiSchema["ui:widget"])
+  const inputType = ["textarea", "email", "select"].includes(uiSchema["ui:widget"])
     ? uiSchema["ui:widget"]
     : schema.enum
       ? "select"
@@ -306,16 +356,11 @@ const StringField = ({
         : schema.type
     
   const selectOptions = inputType === "select"
-    ? schema.enum.map((el, i) => ({
-        value: el,
-        label: schema.enumNames
-          ? schema.enumNames[i]
-          : el
-      }))
+    ? formatOptions(schema)
     : null
   
   const inputValue = inputType === "select"
-    ? selectOptions.find(op => op.value === formData)
+    ? getSelected(selectOptions, formData)
     : formData || ""
   
   const handleChange = e => {
@@ -332,11 +377,8 @@ const StringField = ({
       value={ inputValue }
       errors={ rawErrors }
       onChange={ handleChange }
-      options={ schema.enum && schema.enum.map((el, i) => ({
-        value: el,
-        label: schema.enumNames ? schema.enumNames[i] : el
-      })) }
-      {...{ onBlur,onFocus, disabled, readonly, required }}
+      options={ inputType === "select" && selectOptions }
+      { ...{ onBlur,onFocus, disabled, readonly, required }}
       { ...schema.description && { description: schema.description }}
     />
   )
