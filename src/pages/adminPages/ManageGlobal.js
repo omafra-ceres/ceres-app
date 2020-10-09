@@ -28,16 +28,39 @@ const CollabDisplay = styled.div`
   height: 25px;
   justify-content: center;
   margin-right: 5px;
+  position: relative;
   width: 25px;
+
+  &::after {
+    ${props => props.theme.pseudoFill}
+    align-items: center;
+    background: #ddd8;
+    border-radius: inherit;
+    color: #444;
+    content: "✕";
+    display: flex;
+    font-size: 28px;
+    font-weight: lighter;
+    justify-content: center;
+    overflow: hidden;
+    visibility: hidden;
+  }
+
+  :hover::after {
+    visibility: visible;
+  }
 `
 
-const Collaborator = ({ user }) => {
+const Collaborator = ({ user, handleRemove }) => {
   const { name, email } = user
   const initials = name.split(" ").map(str => str[0].toUpperCase())
-  console.log(initials[0] + (initials.length > 1 ? initials[initials.length - 1] : ""))
+  const initDisplay = `${initials[0]}${initials.length > 1 ? initials[initials.length - 1] : ""}`
   return (
-    <CollabDisplay title={ email }>
-      { initials[0] + (initials.length > 1 ? initials[initials.length - 1] : "") }
+    <CollabDisplay
+      title={ `Remove: ${email}` }
+      onClick={ () => handleRemove(user)
+    }>
+      { initDisplay }
     </CollabDisplay>
   )
 }
@@ -97,21 +120,15 @@ const DatasetListItem = ({ dataset, userList }) => {
     setIsAddOpen(false)
   }
 
-  // const handleAdd = () => {
-  //   const users = selected.map(user => user.data)
-  //   api.post(`/data/${datasetId.slice(1)}/collaborators`, users)
-  //   const edit = [...collaboratorList, ...users]
-  //   setCollaboratorList(edit)
-  //   setUserList(userList.filter(user => !selected.includes(user)))
-  //   setSelected([])
-  //   setAddOpen(false)
-  //   onSubmit({ collaborators: edit })
-  // }
-
   const onChange = value => {
     api.post(`/data/global/${dataset.id}/collaborators`, [value.data])
     setCollaborators([...collaborators, value.data])
     setSelectValue("")
+  }
+
+  const handleRemove = user => {
+    api.post(`/data/global/${dataset.id}/collaborators/delete`, { id: user.id })
+    setCollaborators(collaborators.filter(col => col.id !== user.id))
   }
 
   return (
@@ -119,7 +136,9 @@ const DatasetListItem = ({ dataset, userList }) => {
       <td><Link to={`/${dataset.id}`}>{ dataset.name }</Link></td>
       <td>{ created }</td>
       <td style={{ display: "flex", alignItems: "center" }}>
-        { collaborators.map(col => <Collaborator user={ col } />) }
+        { collaborators.map(user => (
+          <Collaborator key={ user.id } {...{ user, handleRemove }} />
+        )) }
         { isAddOpen ? (
           <Select
             ref={ addSelectRef }
@@ -130,7 +149,11 @@ const DatasetListItem = ({ dataset, userList }) => {
             styles={ selectStyles }
           />
         ) : (
-          <Button buttonType="text" style={{ padding: 0 }} onClick={ () => setIsAddOpen(true) }>Add collaborator</Button>
+          <Button
+            buttonType="text"
+            style={{ padding: 0, minWidth: "unset" }}
+            onClick={ () => setIsAddOpen(true) }
+          >Add user</Button>
         )}
       </td>
       {/* <DatasetAction datasetId={ data.id } /> */}
@@ -149,7 +172,6 @@ const ManageGlobal = () => {
       .then(res => {
         setIsLoading(false)
         setDatasets(res.data)
-        console.log(res.data)
       }).catch(error => {
         setIsLoading(false)
         console.error(error)
