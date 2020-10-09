@@ -97,7 +97,7 @@ const selectStyles = {
   })
 }
 
-const DatasetListItem = ({ dataset, userList }) => {
+const DatasetListItem = ({ dataset, userList, onDelete }) => {
   const [ collaborators, setCollaborators ] = useState(dataset.collaborators || [])
   const [ isAddOpen, setIsAddOpen ] = useState(false)
   const [ selectValue, setSelectValue ] = useState()
@@ -131,6 +131,12 @@ const DatasetListItem = ({ dataset, userList }) => {
     setCollaborators(collaborators.filter(col => col.id !== user.id))
   }
 
+  const handleDelete = dataset => {
+    api.post(`/data/global/${dataset.id}/archive`)
+      .catch(console.error)
+    onDelete(dataset)
+  }
+
   return (
     <tr>
       <td><Link to={`/${dataset.id}`}>{ dataset.name }</Link></td>
@@ -156,7 +162,17 @@ const DatasetListItem = ({ dataset, userList }) => {
           >Add user</Button>
         )}
       </td>
-      {/* <DatasetAction datasetId={ data.id } /> */}
+      <td>
+        <Button
+          buttonType="text"
+          style={{
+            color: "red",
+            padding: "0",
+            minWidth: "unset"
+          }}
+          onClick={ () => handleDelete(dataset) }
+        >delete</Button>
+      </td>
     </tr>
   )
 }
@@ -191,6 +207,10 @@ const ManageGlobal = () => {
       })
   }, [ api ])
 
+  const onDelete = toRemove => {
+    setDatasets(datasets.filter(dataset => dataset !== toRemove))
+  }
+
   return (
     isLoading ? "Loading..." : (
       <DatasetList>
@@ -199,6 +219,7 @@ const ManageGlobal = () => {
             <th>Name</th>
             <th>Created on</th>
             <th>Collaborators</th>
+            <th />
           </tr>
         </thead>
         <tbody>
@@ -206,7 +227,11 @@ const ManageGlobal = () => {
             datasets.map(dataset => (
               <DatasetListItem
                 key={dataset.id}
-                {...{ dataset, userList }}
+                {...{
+                  dataset,
+                  userList,
+                  onDelete
+                }}
               />
             ))
           }

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import styled from 'styled-components'
+import { useAuth0 } from '@auth0/auth0-react'
 import { v4 as uuid } from 'uuid'
-import { Redirect } from 'react-router-dom'
+
 
 import { useAPI } from '../../customHooks'
 
@@ -118,8 +119,9 @@ const generateTemplate = ({ details, template }) => {
 
 const CreateGlobal = () => {
   const [ datasetInfo, setDatasetInfo ] = useState(initialFormData)
+  const { user } = useAuth0()
   const api = useAPI()
-
+  
   const onSubmit = async ({ formData }) => {
     const { details } = formData
     const template = generateTemplate(formData)
@@ -128,8 +130,17 @@ const CreateGlobal = () => {
       details,
       template
     }).catch(err => console.error(err))
-    
-    if (created && created.data.id) window.location.pathname = `/admin/global/manage`
+
+    const userInfo = {
+      id: user.sub.split("|")[1],
+      name: user.name,
+      email: user.email
+    }
+
+    if (created && created.data.id) {
+      await api.post(`/data/global/${created.data.id}/collaborators`, [userInfo]).catch(console.error)
+      window.location.pathname = `/admin/global/manage`
+    }
   }
 
   const onChange = ({ formData }) => {
