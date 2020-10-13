@@ -241,7 +241,7 @@ const navPaths = [
   ],[
     { label: "My datasets", path: "/user/datasets" },
     { label: "Favourites", path: "/user/favourites", disabled: true },
-    { label: "Global datasets", path: "/data/global", disabled: true },
+    { label: "Global datasets", path: "/data/global" },
   ],[
     { label: "Deleted", path: "/user/deleted" },
   ]
@@ -262,6 +262,7 @@ const DataIndex = ({ location }) => {
   useEffect(() => {
     api.get(navView.path)
       .then(res => {
+        console.log(res.data)
         setIsLoading(false)
         setDatasets(res.data)
       }).catch(error => {
@@ -325,7 +326,7 @@ const DataIndex = ({ location }) => {
   const DatasetAction = props => ({
     "/user/datasets": <DeleteButton {...props} />,
     "/user/deleted": <RecoverButton {...props} />
-  })[navView.path]
+  })[navView.path] || ""
 
   const Placeholder = () => [0,1,2,3,4].map((i) => <PlaceholderLi index={ i } key={ i } />)
 
