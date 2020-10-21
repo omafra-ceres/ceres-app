@@ -295,10 +295,10 @@ const formatEnum = schema => {
 const formatGroups = schema => {
   const groups = {}
   schema.anyOf.forEach(option => {
-    let { title: label, enum: [ value ], group="options" } = option
+    let { title: label, enum: [ value ], group="options", ...args } = option
     if (!label) label = value
     if (!groups[group]) groups[group] = []
-    groups[group].push({ value, label })
+    groups[group].push({ value, label, ...args })
   })
   return Object.keys(groups).map(key => ({
     label: key,
@@ -307,9 +307,10 @@ const formatGroups = schema => {
 }
 
 const formatAnyOf = schema => {
-  if (schema.anyOf[0].group) return formatGroups(schema)
+  const type = Object.keys(schema).find(key => ["anyOf", "oneOf", "allOf"].includes(key))
+  if (schema[type][0].group) return formatGroups(schema)
 
-  return schema.anyOf.map(option => {
+  return schema[type].map(option => {
     let { title: label, enum: [ value ] } = option
     if (!label) label = value
     return { value, label }

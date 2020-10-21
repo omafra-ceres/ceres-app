@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { forwardRef } from 'react'
 import styled, { css } from 'styled-components'
 import Select from 'react-select'
 
@@ -240,7 +240,7 @@ const getInputTag = type => {
     : Input
 }
 
-const InputContainer = ({
+const InputContainer = forwardRef(({
   id,
   label,
   value,
@@ -252,7 +252,7 @@ const InputContainer = ({
   readonly,
   description="",
   ...internalProps
-}) => {
+}, ref) => {
   let InputTag = getInputTag(type)
   return (
     <InputWrapper
@@ -267,6 +267,7 @@ const InputContainer = ({
       </Label>
       <InputTag
         {...{
+          ref,
           id,
           value,
           onChange,
@@ -279,7 +280,7 @@ const InputContainer = ({
       { errors.map((err, i) => <InputError key={ i }>{ err }</InputError>) }
     </InputWrapper>
   )
-}
+})
 
 export {
   InputContainer as default,

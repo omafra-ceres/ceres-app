@@ -22,7 +22,7 @@ const StyledHeader = styled.header`
   position: fixed;
   top: 0;
   width: 100%;
-  z-index: 1;
+  z-index: 5;
 
   h1 {
     font-size: ${ p => p.theme.headerSize };
