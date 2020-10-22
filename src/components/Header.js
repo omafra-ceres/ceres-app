@@ -1,11 +1,11 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import styled from 'styled-components'
 import { useAuth0 } from '@auth0/auth0-react'
 
-// import LoginButton from './LoginButton'
-import LogoutButton from './LogoutButton'
+import logo from '../assets/logo_vertical.svg'
 
+import LogoutButton from './LogoutButton'
 import { useRoles } from '../customHooks'
 
 const StyledHeader = styled.header`
@@ -34,9 +34,14 @@ const StyledHeader = styled.header`
     color: inherit;
     text-decoration: none;
   }
+
+  .logo_vertical {
+    height: 50px;
+  }
 `
 
 const NavList = styled.ul`
+  align-items: center;
   display: flex;
   flex-direction: row;
   list-style: none;
@@ -50,12 +55,43 @@ const NavList = styled.ul`
   }
 `
 
+const Banner = styled.div`
+  align-items: center;
+  background: black;
+  box-shadow: inherit;
+  color: white;
+  display: flex;
+  left: 0;
+  padding: 5px;
+  padding-left: inherit;
+  padding-right: inherit;
+  position: absolute;
+  right: 0;
+  top: 100%;
+
+  h1 {
+    margin-right: 20px;
+  }
+
+  .close {
+    cursor: pointer;
+    font-size: 18px;
+    margin-left: auto;
+  }
+
+  :hover .close {
+    font-size: 22px;
+    font-weight: bold;
+  }
+`
+
 const AdminLink = ({ isAdmin }) => isAdmin ? <li><Link to="/admin" className="nav-link">Admin Panel</Link></li> : ""
 
 const Header = () => {
   const { user, isAuthenticated, isLoading } = useAuth0()
   const roles = useRoles()
   const { state } = useLocation()
+  const [ showBanner, setShowBanner ] = useState(true)
 
   useEffect(() => {
     console.log("state:", state)
@@ -63,8 +99,14 @@ const Header = () => {
 
   return (
     <StyledHeader>
-      <h1>Ceres (demo)</h1>
-      <div>{ user ? user.email : "" }</div>
+      { showBanner ? (
+        <Banner onClick={ () => setShowBanner(false) }>
+          <h1>ALPHA</h1>
+          This is a prototype. It is likely to change as we test ideas.
+          <span className="close">✕</span>
+        </Banner>
+      ): "" }
+      <Link to="/"><img className="logo_vertical" src={ logo } alt="Ceres" /></Link>
       <nav>
         <NavList>
           { isLoading || !isAuthenticated
