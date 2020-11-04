@@ -1,68 +1,90 @@
+# Ceres
+
+The client application for the Ceres alpha app developed by a Code for Canada team with and for OMAFRA.
+
+[View full technical documentation for the Ceres app](https://github.com/omafra-ceres/technical-documentation)
+
+## Steps to deploy locally
+1. Clone this repo — `git clone https://github.com/omafra-ceres/ceres-app.git`
+1. Install dependencies — `npm i`
+1. Add environment variables as per `.env.example`
+1. Get started! `npm start`
+
+> **Note:** This should automatically open a tab in your browser pointed to `127.0.0.1:3000`. If this doesn't work or you need to open another tab be sure to use `127.0.0.1:3000` **NOT** `localhost:3000`
+
+
+<br /><br />
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
-## Available Scripts
+<details>
+  <summary>Read the included <code>Create React App</code> starter documentation</summary>
 
-In the project directory, you can run:
+  ## Available Scripts
 
-### `yarn start`
+  In the project directory, you can run:
 
-Runs the app in the development mode.<br />
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+  ### `npm start`
 
-The page will reload if you make edits.<br />
-You will also see any lint errors in the console.
+  Runs the app in the development mode.<br />
+  Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 
-### `yarn test`
+  The page will reload if you make edits.<br />
+  You will also see any lint errors in the console.
 
-Launches the test runner in the interactive watch mode.<br />
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+  ### `npm test`
 
-### `yarn build`
+  Launches the test runner in the interactive watch mode.<br />
+  See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
 
-Builds the app for production to the `build` folder.<br />
-It correctly bundles React in production mode and optimizes the build for the best performance.
+  ### `npm build`
 
-The build is minified and the filenames include the hashes.<br />
-Your app is ready to be deployed!
+  Builds the app for production to the `build` folder.<br />
+  It correctly bundles React in production mode and optimizes the build for the best performance.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+  The build is minified and the filenames include the hashes.<br />
+  Your app is ready to be deployed!
 
-### `yarn eject`
+  See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+  ### `npm eject`
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+  **Note: this is a one-way operation. Once you `eject`, you can’t go back!**
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+  If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+  Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
 
-## Learn More
+  You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+  ## Learn More
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+  You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
 
-### Code Splitting
+  To learn React, check out the [React documentation](https://reactjs.org/).
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/code-splitting
+  ### Code Splitting
 
-### Analyzing the Bundle Size
+  This section has moved here: https://facebook.github.io/create-react-app/docs/code-splitting
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size
+  ### Analyzing the Bundle Size
 
-### Making a Progressive Web App
+  This section has moved here: https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app
+  ### Making a Progressive Web App
 
-### Advanced Configuration
+  This section has moved here: https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/advanced-configuration
+  ### Advanced Configuration
 
-### Deployment
+  This section has moved here: https://facebook.github.io/create-react-app/docs/advanced-configuration
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/deployment
+  ### Deployment
 
-### `yarn build` fails to minify
+  This section has moved here: https://facebook.github.io/create-react-app/docs/deployment
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify
+  ### `yarn build` fails to minify
+
+  This section has moved here: https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify
+
+</details>
