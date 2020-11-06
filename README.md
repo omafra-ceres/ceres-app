@@ -12,6 +12,10 @@ The client application for the Ceres alpha app developed by a Code for Canada te
 
 > **Note:** This should automatically open a tab in your browser pointed to `127.0.0.1:3000`. If this doesn't work or you need to open another tab be sure to use `127.0.0.1:3000` **NOT** `localhost:3000`
 
+## Deploy to Heroku
+
+[Heroku documentation: Deploying Node.js Apps on Heroku ](https://devcenter.heroku.com/articles/deploying-nodejs)
+
 
 <br /><br />
 
