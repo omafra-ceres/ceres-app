@@ -14,11 +14,14 @@ const useAPI = (noAuth = false) => {
     if (savedToken) return savedToken
     savedToken = getAccessTokenSilently({
       audience: 'ceres-api'
-    }).catch(() => (
-      getAccessTokenWithPopup({
+    }).catch(err => {
+      console.error("Failed to get access token silently with error:", err)
+      return getAccessTokenWithPopup({
         audience: 'ceres-api'
-      }).catch(console.error)
-    ))
+      }).catch(err => {
+        console.error("Failed to get access token with popup with error:", err)
+      })
+    })
 
     axios.defaults.headers.common['Authorization'] = `Bearer ${await savedToken}`
     return savedToken
