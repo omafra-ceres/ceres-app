@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import styled from 'styled-components'
 import { useAuth0 } from '@auth0/auth0-react'
 import { v4 as uuid } from 'uuid'
+import { useHistory } from "react-router-dom"
 
 
 import { useAPI } from '../../customHooks'
@@ -121,6 +122,7 @@ const CreateGlobal = () => {
   const [ datasetInfo, setDatasetInfo ] = useState(initialFormData)
   const { user } = useAuth0()
   const api = useAPI()
+  const history = useHistory()
   
   const onSubmit = async ({ formData }) => {
     const { details } = formData
@@ -139,7 +141,7 @@ const CreateGlobal = () => {
 
     if (created && created.data.id) {
       await api.post(`/data/global/${created.data.id}/collaborators`, [userInfo]).catch(console.error)
-      window.location.pathname = `/admin/global/manage`
+      history.push("/admin/global/manage")
     }
   }
 
@@ -149,7 +151,7 @@ const CreateGlobal = () => {
 
   const onCancel = () => {
     setDatasetInfo(initialFormData)
-    window.location.pathname = "/admin/global/manage"
+    history.push("/admin/global/manage")
   }
 
   return (

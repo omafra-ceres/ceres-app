@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback, forwardRef } 
 import styled from 'styled-components'
 import { v4 as uuid } from 'uuid'
 import { useAuth0 } from '@auth0/auth0-react'
+import { useHistory } from "react-router-dom"
 
 import { useAPI } from '../customHooks'
 import {
@@ -329,8 +330,6 @@ const Header = ({ currentStep, changeStep }) => {
   )
 }
 
-const handleCancel = () => window.location.pathname = "/"
-
 const DetailsContainer = ({ details, setDetails, errors }) => {
   const firstInput = useRef()
 
@@ -559,6 +558,8 @@ const DataCreate = () => {
   const [ template, setTemplate ] = useState([{}])
   const [ dataTypes, setDataTypes ] = useState(simpleDataTypes)
   const [ errors, setErrors ] = useState({ details: [], template: [] })
+
+  const history = useHistory()
   
   const { user } = useAuth0()
   const api = useAPI()
@@ -605,6 +606,8 @@ const DataCreate = () => {
     return Object.keys(newErrors).some(key => newErrors[key].length)
   }
 
+  const handleCancel = () => history.push("/")
+
   const save = async () => {
     const datasetDetails = JSON.parse(JSON.stringify(details))
     const { email, name } = user
@@ -617,7 +620,7 @@ const DataCreate = () => {
       template: schema
     }).catch(console.error)
     
-    if (created && created.data.id) window.location.pathname = `/${created.data.id}`
+    if (created && created.data.id) history.push(`/${created.data.id}`)
   }
 
   const changeStep = newStep => { if (!checkErrors()) setStep(newStep) }
